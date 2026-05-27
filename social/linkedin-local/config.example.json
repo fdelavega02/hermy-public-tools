@@ -1,0 +1,12 @@
+{
+  "loginUrl": "https://www.linkedin.com/feed/",
+  "statePath": "./state/storage-state.json",
+  "defaultTimeoutMs": 45000,
+  "selectors": {
+    "postLoginReady": "nav[aria-label='Primary Navigation'], header nav, a[href*='/feed/']",
+    "startPostButton": "button[aria-label*='Start a post'], button.share-box-feed-entry__trigger, button.artdeco-button--muted",
+    "composerDialog": "div[role='dialog']",
+    "editor": "div[role='textbox'], .ql-editor[contenteditable='true'], [contenteditable='true'][aria-multiline='true']",
+    "postButton": "div[role='dialog'] button.artdeco-button--primary, div[role='dialog'] button.share-actions__primary-action, div[role='dialog'] button[aria-label*='Post']"
+  }
+}

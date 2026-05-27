@@ -1,0 +1,16 @@
+{
+  "name": "linkedin-local-starter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local LinkedIn browser automation starter using a one-time manual login and saved local storage state.",
+  "scripts": {
+    "auth": "node auth.mjs",
+    "post": "node post.mjs",
+    "open-compose": "node post.mjs --dry-run",
+    "post-approved": "node post.mjs --post-now --approved --headless"
+  },
+  "dependencies": {
+    "playwright": "^1.54.0"
+  }
+}
