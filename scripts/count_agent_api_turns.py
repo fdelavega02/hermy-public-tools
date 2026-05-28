@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,7 +10,10 @@ from zoneinfo import ZoneInfo
 
 BASE = Path('/home/fdelavega02/.openclaw/agents')
 TZ = ZoneInfo('America/Indianapolis')
-TODAY = datetime.now(TZ).date()
+parser = argparse.ArgumentParser(description='Count per-agent Codex and xAI assistant API turns for a date.')
+parser.add_argument('--date', help='YYYY-MM-DD in America/Indianapolis, default today')
+args = parser.parse_args()
+TARGET_DATE = datetime.strptime(args.date, '%Y-%m-%d').date() if args.date else datetime.now(TZ).date()
 CODEX_PROVIDERS = {'openai-codex'}
 CODEX_APIS = {'openai-codex-responses'}
 XAI_PROVIDERS = {'xai'}
@@ -72,7 +76,7 @@ for agent_dir in sorted(BASE.iterdir()):
                     if not bucket:
                         continue
                     dt = parse_ts(obj.get('timestamp'))
-                    if not dt or dt.date() != TODAY:
+                    if not dt or dt.date() != TARGET_DATE:
                         continue
                     agent_counts[bucket] += 1
     counts[agent_dir.name] = agent_counts
