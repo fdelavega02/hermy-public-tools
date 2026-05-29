@@ -1,0 +1,32 @@
+{
+  "server": {
+    "port": 8787
+  },
+  "spotify": {
+    "clientId": "YOUR_SPOTIFY_CLIENT_ID",
+    "redirectUri": "http://127.0.0.1:8787/callback",
+    "scopes": [
+      "user-read-playback-state",
+      "user-modify-playback-state"
+    ]
+  },
+  "openclaw": {
+    "sessionId": "YOUR_OPENCLAW_SESSION_ID",
+    "thinking": "medium",
+    "deliver": true,
+    "replyChannel": "discord",
+    "replyAccountId": "hermyown",
+    "replyTo": "YOUR_DISCORD_CHANNEL_ID"
+  },
+  "transcription": {
+    "model": "",
+    "language": "en"
+  },
+  "recorder": {
+    "cmd": "pw-record",
+    "device": "alsa_input.usb-Focusrite_Scarlett_Solo_4th_Gen_S17HEB13B97A32-00.HiFi__Mic2__source",
+    "rate": 16000,
+    "channels": 1,
+    "format": "s16"
+  }
+}

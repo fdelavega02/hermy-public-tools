@@ -1,0 +1,12 @@
+{
+  "name": "spotify-ptt-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local Spotify OAuth control plus push-to-talk mic bridge for OpenClaw.",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs --open",
+    "check": "node --check server.mjs"
+  }
+}
