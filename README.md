@@ -23,6 +23,9 @@ Utility scripts for workspace maintenance, auto-commit helpers, and API usage re
 ### `social/linkedin-local/`
 A local LinkedIn posting helper that drafts and posts approved content through a browser-based workflow. It is designed to keep credentials and private session files out of the public repo.
 
+### `automation/spotify-ptt-bridge/`
+A local Spotify and push-to-talk bridge. It handles Spotify playback controls, voice transcription, and local speech playback, with public-safe defaults and no private account state checked in.
+
 ## What Is Not Included
 
 Private memory files, account state, browser sessions, credentials, generated outputs, and sensitive logs are intentionally excluded.
