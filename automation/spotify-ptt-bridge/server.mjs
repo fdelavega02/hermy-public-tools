@@ -26,11 +26,11 @@ const DEFAULTS = {
     scopes: ['user-read-playback-state', 'user-modify-playback-state'],
   },
   openclaw: {
-    sessionId: 'agent:twin:discord:direct:257968479225905163',
+    sessionId: '',
     thinking: 'medium',
     deliver: true,
     replyChannel: 'discord',
-    replyAccountId: 'hermyown',
+    replyAccountId: '',
     replyTo: '',
   },
   transcription: {
@@ -39,11 +39,15 @@ const DEFAULTS = {
   },
   recorder: {
     cmd: 'pw-record',
-    device: 'alsa_input.usb-Focusrite_Scarlett_Solo_4th_Gen_S17HEB13B97A32-00.HiFi__Mic2__source',
+    device: '',
     rate: 16000,
     channels: 1,
     format: 's16',
     maxMs: 20000,
+  },
+  clip: {
+    enabled: true,
+    script: './ptt/clip-replay.sh',
   },
 };
 
@@ -71,6 +75,7 @@ async function loadConfig() {
     openclaw: { ...DEFAULTS.openclaw, ...(cfg.openclaw ?? {}) },
     transcription: { ...DEFAULTS.transcription, ...(cfg.transcription ?? {}) },
     recorder: { ...DEFAULTS.recorder, ...(cfg.recorder ?? {}) },
+    clip: { ...DEFAULTS.clip, ...(cfg.clip ?? {}) },
   };
   if (process.env.SPOTIFY_CLIENT_ID) merged.spotify.clientId = process.env.SPOTIFY_CLIENT_ID;
   if (process.env.SPOTIFY_REDIRECT_URI) merged.spotify.redirectUri = process.env.SPOTIFY_REDIRECT_URI;
@@ -325,6 +330,25 @@ async function trySpeakTextLocally(text) {
   }
 }
 
+async function handleClipVoiceCommand(cfg, transcript) {
+  const text = String(transcript || '').trim();
+  const normalized = text.toLowerCase().replace(/[.!?]+$/g, '').trim();
+  if (!normalized || cfg.clip?.enabled === false) return null;
+  if (!/\b(clip that|clip it|save that clip|save clip|save that|record that)\b/.test(normalized)) return null;
+
+  const script = cfg.clip?.script || './ptt/clip-replay.sh';
+  const scriptPath = path.isAbsolute(script) ? script : path.join(ROOT, script);
+  const { stdout, stderr } = await execFileAsync(scriptPath, ['save'], { cwd: ROOT, timeout: 10000 });
+  const output = [stdout, stderr].filter(Boolean).join('\n').trim();
+  const assistantText = output.includes('Saved clip:')
+    ? 'Clipped it.'
+    : output.includes('Replay buffer just started')
+      ? 'Clip buffer is starting. Say clip that again in a few seconds.'
+      : 'Clip save triggered.';
+  const localSpeech = await trySpeakTextLocally(assistantText);
+  return { handled: true, action: 'clip-that', result: { output }, assistantText, localSpeech };
+}
+
 async function handleSpotifyVoiceCommand(cfg, transcript) {
   const text = String(transcript || '').trim();
   const normalized = text.toLowerCase().replace(/[.!?]+$/g, '').trim();
@@ -384,6 +408,12 @@ async function handleSpotifyVoiceCommand(cfg, transcript) {
 
 async function handleTranscript(cfg, transcript, options = {}) {
   const profile = options.profile || 'spotify';
+  const clipCommand = await handleClipVoiceCommand(cfg, transcript).catch(error => ({ handled: true, action: 'clip-error', error: error?.message || String(error), assistantText: `Clip command failed: ${error?.message || String(error)}` }));
+  if (clipCommand?.handled) {
+    await logVoiceCommand({ transcript, profile, type: 'clip', action: clipCommand.action, assistantText: clipCommand.assistantText, error: clipCommand.error || null, result: clipCommand.result || null, reason: options.reason || null });
+    return { command: clipCommand };
+  }
+
   const command = profile === 'voice'
     ? null
     : await handleSpotifyVoiceCommand(cfg, transcript).catch(error => ({ handled: true, action: 'spotify-error', error: error?.message || String(error), assistantText: `Spotify command failed: ${error?.message || String(error)}` }));

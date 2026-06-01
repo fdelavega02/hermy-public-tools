@@ -3,7 +3,7 @@
 
 No root required. Grabs only:
 - Ctrl+Alt+Space => spotify profile
-- Ctrl+Alt+V     => voice profile
+- Ctrl+F1        => voice profile
 
 Uses XGrabKey directly instead of KDE global shortcuts so KeyPress/KeyRelease are
 handled by this process.
@@ -23,7 +23,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / "state"
 LOG = STATE / "x11-ptt-listener.log"
 DEFAULT_SERVER = "http://127.0.0.1:8787"
@@ -39,7 +39,7 @@ CurrentTime = 0
 True_ = 1
 False_ = 0
 XK_space = 0x20
-XK_v = 0x76
+XK_F1 = 0xFFBE
 
 running = True
 active_profile: str | None = None
@@ -155,11 +155,16 @@ def main() -> int:
         return 2
 
     root = x11.XDefaultRootWindow(display)
+    space_keycode = int(x11.XKeysymToKeycode(display, XK_space))
+    f1_keycode = int(x11.XKeysymToKeycode(display, XK_F1))
     keycodes = {
-        int(x11.XKeysymToKeycode(display, XK_space)): "spotify",
-        int(x11.XKeysymToKeycode(display, XK_v)): "voice",
+        space_keycode: "spotify",
+        f1_keycode: "voice",
     }
-    mods = ControlMask | Mod1Mask
+    profile_mods = {
+        "spotify": ControlMask | Mod1Mask,
+        "voice": ControlMask,
+    }
     lock_variants = [0, LockMask, Mod2Mask, LockMask | Mod2Mask]
 
     @XErrorHandler
@@ -176,9 +181,10 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001
             log("detectable-autorepeat-error", error=str(exc))
 
-    for keycode in keycodes:
+    for keycode, profile in keycodes.items():
+        base_mods = profile_mods[profile]
         for extra in lock_variants:
-            x11.XGrabKey(display, keycode, mods | extra, root, True_, GrabModeAsync, GrabModeAsync)
+            x11.XGrabKey(display, keycode, base_mods | extra, root, True_, GrabModeAsync, GrabModeAsync)
     x11.XFlush(display)
     log("started", server=args.server, dryRun=args.dry_run, keycodes=keycodes)
 
@@ -200,7 +206,7 @@ def main() -> int:
                 continue
             if event.type == KeyPress and active_profile is None:
                 active_profile = profile
-                log("ptt-start", profile=profile, keycode=keycode, state=int(event.xkey.state))
+                log("ptt-start", profile=profile, keycode=keycode, state=int(event.xkey.state), chord=("ctrl+f1" if profile == "voice" else "ctrl+alt+space"))
                 if not args.dry_run:
                     try:
                         post(args.server, "/api/ptt/start", deliver=(profile == "voice"), profile=profile)
@@ -226,9 +232,10 @@ def main() -> int:
     finally:
         if active_profile is not None and not args.dry_run:
             post_background(args.server, "/api/ptt/stop", deliver=(active_profile == "voice"), profile=active_profile)
-        for keycode in keycodes:
+        for keycode, profile in keycodes.items():
+            base_mods = profile_mods[profile]
             for extra in lock_variants:
-                x11.XUngrabKey(display, keycode, mods | extra, root)
+                x11.XUngrabKey(display, keycode, base_mods | extra, root)
         x11.XFlush(display)
         x11.XCloseDisplay(display)
         log("stopped")

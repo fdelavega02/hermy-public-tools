@@ -16,13 +16,14 @@ require_dir() {
 
 require_dir "$TWIN_WORKSPACE/scripts"
 require_dir "$TWIN_WORKSPACE/social/linkedin-local"
+require_dir "$TWIN_WORKSPACE/automation/spotify-ptt-bridge"
 require_dir "$HERMY_PUBLIC/.git"
 require_dir "$MAIN_WORKSPACE/scripts"
 require_dir "$MAIN_WORKSPACE/mail/outlook-local"
 require_dir "$HERMIONE_PUBLIC/.git"
 
 sync_hermy_public() {
-  mkdir -p "$HERMY_PUBLIC/scripts" "$HERMY_PUBLIC/social/linkedin-local"
+  mkdir -p "$HERMY_PUBLIC/scripts" "$HERMY_PUBLIC/social/linkedin-local" "$HERMY_PUBLIC/automation/spotify-ptt-bridge"
 
   rsync -a --delete \
     --exclude='leon_talia_daily_verbatim.py' \
@@ -34,6 +35,15 @@ sync_hermy_public() {
     --exclude='output/' \
     --exclude='state/' \
     "$TWIN_WORKSPACE/social/linkedin-local/" "$HERMY_PUBLIC/social/linkedin-local/"
+
+
+  rsync -a --delete \
+    --exclude='config.json' \
+    --exclude='node_modules/' \
+    --exclude='state/' \
+    --exclude='__pycache__/' \
+    --exclude='*.pyc' \
+    "$TWIN_WORKSPACE/automation/spotify-ptt-bridge/" "$HERMY_PUBLIC/automation/spotify-ptt-bridge/"
 }
 
 sync_hermione_public() {

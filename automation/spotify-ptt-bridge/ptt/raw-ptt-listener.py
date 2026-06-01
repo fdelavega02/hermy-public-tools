@@ -22,7 +22,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / "state"
 LOG = STATE / "raw-ptt-listener.log"
 DEFAULT_DEVICE = "/dev/input/by-id/usb-Wooting_Wooting_80HE_A02B2436W08T00100S01H02611-if01-event-kbd"

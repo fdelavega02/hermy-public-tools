@@ -1,13 +1,14 @@
-import { appendFile } from 'node:fs/promises';
+import { appendFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import os from 'node:os';
-
 const server = 'http://127.0.0.1:8787';
 const action = process.argv[2] || 'toggle';
 const body = JSON.stringify({ deliver: false });
-const logPath = path.join(os.homedir(), '.openclaw', 'workspace-twin', 'automation', 'spotify-ptt-bridge', 'state', 'hotkey-toggle.log');
+const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const stateDir = path.join(root, 'state');
+const logPath = path.join(stateDir, 'hotkey-toggle.log');
 
 async function logLine(line) {
+  await mkdir(stateDir, { recursive: true }).catch(() => {});
   await appendFile(logPath, `${new Date().toISOString()} ${line}\n`, 'utf8').catch(() => {});
 }
 

@@ -24,9 +24,13 @@
   },
   "recorder": {
     "cmd": "pw-record",
-    "device": "alsa_input.usb-Focusrite_Scarlett_Solo_4th_Gen_S17HEB13B97A32-00.HiFi__Mic2__source",
+    "device": "",
     "rate": 16000,
     "channels": 1,
     "format": "s16"
+  },
+  "clip": {
+    "enabled": true,
+    "script": "./ptt/clip-replay.sh"
   }
 }

@@ -1,17 +1,23 @@
-# Spotify + push-to-talk bridge
+# Spotify + PTT bridge
 
-Local bridge for two things:
+Local bridge with two clearly separated parts:
 
-- Spotify Web API control on your Premium account
-- a general voice relay that records when you toggle it, transcribes, deletes the audio, and hands the transcript back to OpenClaw, which can reply through Discord
+- `spotify/` documents Spotify Web API setup and playback control
+- `ptt/` contains push-to-talk, voice relay, hotkey, and clip-replay scripts
 
-## What this does
+The shared `server.mjs` stays at the project root because it connects both sides through one local web/API server.
 
-- Spotify OAuth uses PKCE, so no client secret is stored
-- Playback control goes through the Spotify Web API, not mouse clicks
-- Mic audio is only kept in a temporary file long enough to transcribe
-- The temp audio file is deleted right after transcription
-- The transcript can be sent into your OpenClaw Discord session, so I can answer back there
+## Layout
+
+```text
+spotify-ptt-bridge/
+├── server.mjs              # shared local API/web server
+├── config.example.json     # safe starter config
+├── config.json             # local private config, ignored by git
+├── spotify/                # Spotify setup/docs
+├── ptt/                    # PTT, voice relay, hotkeys, clip replay
+└── state/                  # tokens, pid files, logs, ignored by git
+```
 
 ## Setup
 
@@ -21,7 +27,7 @@ Local bridge for two things:
 3. Copy the example config:
 
 ```bash
-cd /home/fdelavega02/.openclaw/workspace-twin/automation/spotify-ptt-bridge
+cd automation/spotify-ptt-bridge
 cp config.example.json config.json
 ```
 
@@ -36,9 +42,7 @@ cp config.example.json config.json
 npm start
 ```
 
-Then open the local bridge in your browser.
-
-Click **Connect Spotify**, approve the app, and come back.
+Then open the local bridge in your browser, click **Connect Spotify**, approve the app, and come back.
 
 ### Background
 
@@ -52,20 +56,17 @@ systemctl --user status spotify-ptt-bridge.service
 
 It is enabled to start on login.
 
-## Mic bridge
+## Quick commands
 
-- On the web page: hold **Hold to talk** or hold Space while the page is focused
-- Speak
-- Release to stop and send
-
-Voice commands currently include play, pause, next, previous, mute, volume, and restart song.
-
-The KDE global hotkey is still toggle-based because Plasma shortcuts fire an activation event, not a reliable key-release event. Press it once to start and once again to stop.
-
-The bridge records to a temporary file only while you are talking. It does not keep an archive.
+```bash
+npm run check          # syntax-check server.mjs
+npm run ptt:toggle     # toggle PTT from CLI
+npm run ptt:x11        # start X11 global hotkey listener
+npm run ptt:raw        # start raw keyboard listener
+```
 
 ## Notes
 
 - Spotify control only works while a device is active or selected.
-- If transcription fails, OpenClaw’s audio transcription provider/config likely needs setup.
-- KDE Plasma hotkeys: `Ctrl+Alt+Space` for Spotify, `Ctrl+Alt+V` for voice relay.
+- Mic audio is only kept in a temporary file long enough to transcribe, then deleted.
+- The shared server keeps Spotify and PTT connected, but the docs and support scripts are separated so GitHub is easier to read.
