@@ -23,7 +23,7 @@ const DEFAULTS = {
   spotify: {
     clientId: '',
     redirectUri: 'http://127.0.0.1:8787/callback',
-    scopes: ['user-read-playback-state', 'user-modify-playback-state'],
+    scopes: ['user-read-playback-state', 'user-modify-playback-state', 'playlist-read-private', 'playlist-read-collaborative'],
   },
   openclaw: {
     sessionId: '',
@@ -71,7 +71,7 @@ async function loadConfig() {
   }
   const merged = {
     server: { ...DEFAULTS.server, ...(cfg.server ?? {}) },
-    spotify: { ...DEFAULTS.spotify, ...(cfg.spotify ?? {}) },
+    spotify: { ...DEFAULTS.spotify, ...(cfg.spotify ?? {}), playlists: { ...(DEFAULTS.spotify.playlists ?? {}), ...(cfg.spotify?.playlists ?? {}) } },
     openclaw: { ...DEFAULTS.openclaw, ...(cfg.openclaw ?? {}) },
     transcription: { ...DEFAULTS.transcription, ...(cfg.transcription ?? {}) },
     recorder: { ...DEFAULTS.recorder, ...(cfg.recorder ?? {}) },
@@ -330,6 +330,93 @@ async function trySpeakTextLocally(text) {
   }
 }
 
+
+function normalizePlaylistName(input) {
+  return String(input || '')
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(the|my|playlist|spotify)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractPlaylistRequest(normalizedText) {
+  const patterns = [
+    /\b(?:switch|change)\s+(?:spotify|music)?\s*(?:to|over to)\s+(?:my\s+)?(.+?)(?:\s+playlist)?$/,
+    /\b(?:play|start|put on)\s+(?:my\s+)?(.+?)\s+playlist$/,
+    /\b(?:play|start|put on)\s+(?:playlist\s+)?(.+)$/,
+  ];
+  for (const pattern of patterns) {
+    const match = normalizedText.match(pattern);
+    if (!match?.[1]) continue;
+    const name = match[1]
+      .replace(/\b(?:on spotify|in spotify|please|for me)\b/g, '')
+      .trim();
+    if (name && !/^(music|spotify|it|something)$/.test(name)) return name;
+  }
+  return '';
+}
+
+function configuredPlaylistEntries(cfg) {
+  const playlists = cfg.spotify?.playlists || {};
+  return Object.entries(playlists)
+    .map(([alias, value]) => {
+      if (!value) return null;
+      if (typeof value === 'string') return { alias, name: alias, uri: value };
+      return { alias, name: value.name || alias, uri: value.uri || value.contextUri || '', id: value.id || '' };
+    })
+    .filter(item => item?.uri || item?.id);
+}
+
+async function fetchUserPlaylists(cfg) {
+  const items = [];
+  let endpoint = '/v1/me/playlists?limit=50';
+  for (let page = 0; endpoint && page < 10; page += 1) {
+    const data = await spotifyRequest(cfg, 'GET', endpoint);
+    for (const item of data?.items || []) {
+      if (item?.uri && item?.name) items.push({ name: item.name, uri: item.uri, id: item.id });
+    }
+    endpoint = data?.next ? data.next.replace('https://api.spotify.com', '') : '';
+  }
+  return items;
+}
+
+function bestPlaylistMatch(request, playlists) {
+  const wanted = normalizePlaylistName(request);
+  if (!wanted) return null;
+  const candidates = playlists.map(item => ({ ...item, keys: [item.alias, item.name].filter(Boolean).map(normalizePlaylistName) }));
+  return candidates.find(item => item.keys.includes(wanted))
+    || candidates.find(item => item.keys.some(key => key && (key.includes(wanted) || wanted.includes(key))))
+    || null;
+}
+
+async function switchToPlaylist(cfg, request) {
+  const configured = configuredPlaylistEntries(cfg);
+  let match = bestPlaylistMatch(request, configured);
+  let source = 'configured';
+  if (!match) {
+    try {
+      const playlists = await fetchUserPlaylists(cfg);
+      match = bestPlaylistMatch(request, playlists);
+      source = 'spotify-library';
+    } catch (error) {
+      if (String(error?.message || error).includes('Insufficient client scope')) {
+        throw new Error('Spotify needs to be reconnected with playlist-read scopes before I can search your library playlists. Open the bridge, connect Spotify again, then retry. You can also add playlist aliases under spotify.playlists in config.json.');
+      }
+      throw error;
+    }
+  }
+  if (!match) {
+    const known = configured.map(item => item.alias || item.name).filter(Boolean).slice(0, 8);
+    const hint = known.length ? ` Known aliases: ${known.join(', ')}.` : ' Add aliases under spotify.playlists in config.json, or reconnect Spotify with playlist-read scopes.';
+    throw new Error(`I could not find a Spotify playlist matching "${request}".${hint}`);
+  }
+  const contextUri = match.uri || `spotify:playlist:${match.id}`;
+  const result = await spotifyRequest(cfg, 'PUT', '/v1/me/player/play', { context_uri: contextUri });
+  return { result, playlist: { name: match.name || match.alias || request, uri: contextUri, source } };
+}
+
 async function handleClipVoiceCommand(cfg, transcript) {
   const text = String(transcript || '').trim();
   const normalized = text.toLowerCase().replace(/[.!?]+$/g, '').trim();
@@ -358,13 +445,21 @@ async function handleSpotifyVoiceCommand(cfg, transcript) {
   let action = '';
   let result = null;
 
+  const playlistRequest = extractPlaylistRequest(normalized);
+  if (playlistRequest) {
+    const switched = await switchToPlaylist(cfg, playlistRequest);
+    result = switched;
+    action = 'playlist';
+    assistantText = `Playing ${switched.playlist.name}.`;
+  }
+
   const volumeMatch = normalized.match(/(?:set\s+)?(?:spotify\s+)?volume(?:\s+(?:to|at))?\s+(\d{1,3})\b/) || normalized.match(/\b(?:turn|set)\s+(?:it|music|spotify)?\s*(?:to\s+)?(\d{1,3})\s*(?:percent|%)\b/);
-  if (volumeMatch) {
+  if (!action && volumeMatch) {
     const volumePercent = Math.max(0, Math.min(100, Number(volumeMatch[1])));
     result = await spotifyRequest(cfg, 'PUT', `/v1/me/player/volume?volume_percent=${encodeURIComponent(volumePercent)}`);
     action = 'volume';
     assistantText = `Set Spotify volume to ${volumePercent}.`;
-  } else if (/\b(pause|pause spotify|pause music|stop music|stop spotify|pause it|stop it)\b/.test(normalized)) {
+  } else if (!action && /\b(pause|pause spotify|pause music|stop music|stop spotify|pause it|stop it)\b/.test(normalized)) {
     const player = await spotifyRequest(cfg, 'GET', '/v1/me/player').catch(() => null);
     if (player && player.is_playing === false) {
       result = { alreadyPaused: true };
@@ -374,15 +469,15 @@ async function handleSpotifyVoiceCommand(cfg, transcript) {
       assistantText = 'Paused Spotify.';
     }
     action = 'pause';
-  } else if (/\b(play|resume|play spotify|resume spotify|play music|resume music)\b/.test(normalized)) {
+  } else if (!action && /\b(play|resume|play spotify|resume spotify|play music|resume music)\b/.test(normalized)) {
     result = await spotifyRequest(cfg, 'PUT', '/v1/me/player/play');
     action = 'play';
     assistantText = 'Resumed Spotify.';
-  } else if (/\b(next|skip|skip song|next song|next track)\b/.test(normalized)) {
+  } else if (!action && /\b(next|skip|skip song|next song|next track)\b/.test(normalized)) {
     result = await spotifyRequest(cfg, 'POST', '/v1/me/player/next');
     action = 'next';
     assistantText = 'Skipped to the next track.';
-  } else if (/\b(restart|restart song|restart track|restart this song|start over|start this song over|replay|play from the beginning|beginning)\b/.test(normalized)) {
+  } else if (!action && /\b(restart|restart song|restart track|restart this song|start over|start this song over|replay|play from the beginning|beginning)\b/.test(normalized)) {
     const player = await spotifyRequest(cfg, 'GET', '/v1/me/player').catch(() => null);
     if (player?.is_playing === false) {
       result = await spotifyRequest(cfg, 'PUT', '/v1/me/player/play', { position_ms: 0 });
@@ -391,11 +486,11 @@ async function handleSpotifyVoiceCommand(cfg, transcript) {
     }
     action = 'restart';
     assistantText = 'Restarted the current track.';
-  } else if (/\b(previous|prev|back|last song|previous song|previous track)\b/.test(normalized)) {
+  } else if (!action && /\b(previous|prev|back|last song|previous song|previous track)\b/.test(normalized)) {
     result = await spotifyRequest(cfg, 'POST', '/v1/me/player/previous');
     action = 'previous';
     assistantText = 'Went to the previous track.';
-  } else if (/\b(mute|mute spotify|mute music)\b/.test(normalized)) {
+  } else if (!action && /\b(mute|mute spotify|mute music)\b/.test(normalized)) {
     result = await spotifyRequest(cfg, 'PUT', '/v1/me/player/volume?volume_percent=0');
     action = 'mute';
     assistantText = 'Muted Spotify.';
@@ -1107,6 +1202,15 @@ async function main() {
           case 'transfer': {
             const deviceIds = body.deviceId ? [body.deviceId] : [];
             result = await spotifyRequest(cfg, 'PUT', '/v1/me/player', { device_ids: deviceIds, play: Boolean(body.play) });
+            break;
+          }
+          case 'playlist': {
+            const name = body.name || body.playlist || body.alias;
+            if (!name) {
+              sendJson(res, 400, { error: 'Missing playlist name or alias.' });
+              return;
+            }
+            result = await switchToPlaylist(cfg, name);
             break;
           }
           default:

@@ -18,3 +18,24 @@ This section covers the Spotify side of the bridge.
 ## Device note
 
 Spotify commands need an active or available Spotify device. If `/devices` is empty, open Spotify on the phone or desktop first, then retry the command.
+
+## Playlist switching
+
+You can switch playlists by voice or API once Spotify has playlist-read access. Example voice commands:
+
+- "switch to chill playlist"
+- "play my gym playlist"
+- "put on focus"
+
+The bridge first checks aliases in `../config.json` under `spotify.playlists`, then searches your Spotify library playlists by name. Example aliases:
+
+```json
+"spotify": {
+  "playlists": {
+    "chill": "spotify:playlist:YOUR_PLAYLIST_ID",
+    "gym": { "uri": "spotify:playlist:YOUR_PLAYLIST_ID", "name": "Gym" }
+  }
+}
+```
+
+If you added playlist-read scopes after already connecting Spotify, open `http://127.0.0.1:8787/auth/spotify` and approve Spotify again.

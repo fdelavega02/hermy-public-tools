@@ -65,6 +65,16 @@ npm run ptt:x11        # start X11 global hotkey listener
 npm run ptt:raw        # start raw keyboard listener
 ```
 
+## Playlist voice commands
+
+After reconnecting Spotify with playlist-read scopes, you can say things like:
+
+- "switch to chill playlist"
+- "play my gym playlist"
+- "put on focus"
+
+Playlist aliases can be added under `spotify.playlists` in `config.json`.
+
 ## Notes
 
 - Spotify control only works while a device is active or selected.
