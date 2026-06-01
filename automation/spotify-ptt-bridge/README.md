@@ -73,7 +73,7 @@ After reconnecting Spotify with playlist-read scopes, you can say things like:
 - "play my gym playlist"
 - "put on focus"
 
-Playlist aliases can be added under `spotify.playlists` in `config.json`.
+Playlist aliases can be added under `spotify.playlists` in `config.json`. Playlist switching also turns shuffle on automatically before playback starts.
 
 ## Notes
 

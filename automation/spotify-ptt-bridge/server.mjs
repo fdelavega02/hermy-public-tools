@@ -413,8 +413,14 @@ async function switchToPlaylist(cfg, request) {
     throw new Error(`I could not find a Spotify playlist matching "${request}".${hint}`);
   }
   const contextUri = match.uri || `spotify:playlist:${match.id}`;
+  const player = await spotifyRequest(cfg, 'GET', '/v1/me/player').catch(() => null);
+  let shuffleChanged = false;
+  if (player?.shuffle_state !== true) {
+    await spotifyRequest(cfg, 'PUT', '/v1/me/player/shuffle?state=true');
+    shuffleChanged = true;
+  }
   const result = await spotifyRequest(cfg, 'PUT', '/v1/me/player/play', { context_uri: contextUri });
-  return { result, playlist: { name: match.name || match.alias || request, uri: contextUri, source } };
+  return { result, playlist: { name: match.name || match.alias || request, uri: contextUri, source }, shuffle: { enabled: true, changed: shuffleChanged } };
 }
 
 async function handleClipVoiceCommand(cfg, transcript) {

@@ -27,7 +27,7 @@ You can switch playlists by voice or API once Spotify has playlist-read access. 
 - "play my gym playlist"
 - "put on focus"
 
-The bridge first checks aliases in `../config.json` under `spotify.playlists`, then searches your Spotify library playlists by name. Example aliases:
+The bridge first checks aliases in `../config.json` under `spotify.playlists`, then searches your Spotify library playlists by name. Playlist switching turns shuffle on automatically before playback starts. Example aliases:
 
 ```json
 "spotify": {
