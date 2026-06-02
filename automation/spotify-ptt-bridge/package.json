@@ -12,6 +12,6 @@
     "ptt:start": "node ptt/hotkey-toggle.mjs start",
     "ptt:stop": "node ptt/hotkey-toggle.mjs stop",
     "ptt:x11": "python ptt/x11-ptt-listener.py",
-    "ptt:raw": "python ptt/raw-ptt-listener.py"
+    "ptt:raw": "echo \"raw input listener retired: failed /dev/input permission attempt; use npm run ptt:x11\" && exit 1"
   }
 }

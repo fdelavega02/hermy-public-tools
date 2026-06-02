@@ -62,7 +62,7 @@ It is enabled to start on login.
 npm run check          # syntax-check server.mjs
 npm run ptt:toggle     # toggle PTT from CLI
 npm run ptt:x11        # start X11 global hotkey listener
-npm run ptt:raw        # start raw keyboard listener
+npm run ptt:raw        # retired failed /dev/input attempt; exits without running
 ./ptt/clip-replay.sh save   # save the active GPU Screen Recorder replay buffer
 ```
 

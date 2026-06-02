@@ -6,7 +6,7 @@ This section contains the PTT, voice relay, hotkey, and clip-replay support scri
 
 - `hotkey-toggle.mjs` toggles the PTT endpoint from a CLI or desktop shortcut.
 - `x11-ptt-listener.py` provides global hold-to-talk shortcuts on X11 without root.
-- `raw-ptt-listener.py` watches a keyboard input device directly for reliable press/release events.
+- `raw-ptt-listener.py` is retained only as a failed `/dev/input` experiment. It is not part of the active PC setup.
 - `clip-replay.sh` controls GPU Screen Recorder replay clips.
 
 ## Hotkeys
@@ -16,11 +16,15 @@ Current listener behavior:
 - X11 listener (`x11-ptt-listener.py`):
   - `Ctrl+F2` holds the Spotify voice-command profile.
   - `Ctrl+F1` holds the general voice relay profile.
-- Raw input listener (`raw-ptt-listener.py`):
-  - `Ctrl+Alt+Space` holds the Spotify voice-command profile.
-  - `Ctrl+Alt+V` holds the general voice relay profile.
 
-Both listeners call `/api/ptt/start` on press and `/api/ptt/stop` on release.
+The retired raw input listener attempted to use:
+
+- `Ctrl+Alt+Space` for Spotify voice-command profile.
+- `Ctrl+Alt+V` for general voice relay profile.
+
+That approach failed on this PC because reading `/dev/input/...` requires elevated device permissions, so it is intentionally not used. `npm run ptt:raw` now exits with a message instead of starting it.
+
+The active X11 listener calls `/api/ptt/start` on press and `/api/ptt/stop` on release.
 
 ## Clip replay
 
