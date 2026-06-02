@@ -218,6 +218,53 @@ async function spotifyRequest(cfg, method, endpoint, body) {
   }
 }
 
+function isNoActiveSpotifyDeviceError(error) {
+  const message = String(error?.message || error || '');
+  return message.includes('NO_ACTIVE_DEVICE') || message.includes('No active device found');
+}
+
+async function getPreferredSpotifyDevice(cfg) {
+  const data = await spotifyRequest(cfg, 'GET', '/v1/me/player/devices');
+  const devices = Array.isArray(data?.devices) ? data.devices : [];
+  const active = devices.find(device => device.is_active && !device.is_restricted);
+  if (active) return { device: active, activated: false };
+
+  const preferredName = cfg.spotify?.preferredDeviceName || cfg.spotify?.deviceName || '';
+  const preferred = preferredName
+    ? devices.find(device => !device.is_restricted && String(device.name || '').toLowerCase() === String(preferredName).toLowerCase())
+    : null;
+  const fallback = preferred || devices.find(device => !device.is_restricted) || devices[0] || null;
+  if (!fallback?.id) {
+    throw new Error('Spotify has no available playback device. Open Spotify on this computer or another device, then try again.');
+  }
+  return { device: fallback, activated: true };
+}
+
+async function ensureSpotifyPlaybackDevice(cfg, { play = false } = {}) {
+  const { device, activated } = await getPreferredSpotifyDevice(cfg);
+  if (activated) {
+    await spotifyRequest(cfg, 'PUT', '/v1/me/player', { device_ids: [device.id], play: Boolean(play) });
+  }
+  return { device, activated };
+}
+
+async function spotifyPlay(cfg, body, { skipIfAlreadyPlaying = false } = {}) {
+  if (skipIfAlreadyPlaying && body === undefined) {
+    const player = await spotifyRequest(cfg, 'GET', '/v1/me/player').catch(() => null);
+    if (player?.is_playing === true) {
+      return { result: { alreadyPlaying: true }, recoveredDevice: null, alreadyPlaying: true };
+    }
+  }
+
+  try {
+    return { result: await spotifyRequest(cfg, 'PUT', '/v1/me/player/play', body), recoveredDevice: null, alreadyPlaying: false };
+  } catch (error) {
+    if (!isNoActiveSpotifyDeviceError(error)) throw error;
+    const recoveredDevice = await ensureSpotifyPlaybackDevice(cfg, { play: true });
+    return { result: await spotifyRequest(cfg, 'PUT', '/v1/me/player/play', body), recoveredDevice, alreadyPlaying: false };
+  }
+}
+
 async function runOpenClaw(args, timeoutSeconds = 120) {
   const result = await execFileAsync('openclaw', args, {
     timeout: timeoutSeconds * 1000,
@@ -413,14 +460,15 @@ async function switchToPlaylist(cfg, request) {
     throw new Error(`I could not find a Spotify playlist matching "${request}".${hint}`);
   }
   const contextUri = match.uri || `spotify:playlist:${match.id}`;
+  await ensureSpotifyPlaybackDevice(cfg, { play: false });
   const player = await spotifyRequest(cfg, 'GET', '/v1/me/player').catch(() => null);
   let shuffleChanged = false;
   if (player?.shuffle_state !== true) {
     await spotifyRequest(cfg, 'PUT', '/v1/me/player/shuffle?state=true');
     shuffleChanged = true;
   }
-  const result = await spotifyRequest(cfg, 'PUT', '/v1/me/player/play', { context_uri: contextUri });
-  return { result, playlist: { name: match.name || match.alias || request, uri: contextUri, source }, shuffle: { enabled: true, changed: shuffleChanged } };
+  const playResult = await spotifyPlay(cfg, { context_uri: contextUri });
+  return { result: playResult.result, recoveredDevice: playResult.recoveredDevice, playlist: { name: match.name || match.alias || request, uri: contextUri, source }, shuffle: { enabled: true, changed: shuffleChanged } };
 }
 
 async function handleClipVoiceCommand(cfg, transcript) {
@@ -476,9 +524,13 @@ async function handleSpotifyVoiceCommand(cfg, transcript) {
     }
     action = 'pause';
   } else if (!action && /\b(play|resume|play spotify|resume spotify|play music|resume music)\b/.test(normalized)) {
-    result = await spotifyRequest(cfg, 'PUT', '/v1/me/player/play');
+    result = await spotifyPlay(cfg, undefined, { skipIfAlreadyPlaying: true });
     action = 'play';
-    assistantText = 'Resumed Spotify.';
+    assistantText = result.alreadyPlaying
+      ? 'Spotify is already playing.'
+      : result.recoveredDevice?.device?.name
+        ? `Resumed Spotify on ${result.recoveredDevice.device.name}.`
+        : 'Resumed Spotify.';
   } else if (!action && /\b(next|skip|skip song|next song|next track)\b/.test(normalized)) {
     result = await spotifyRequest(cfg, 'POST', '/v1/me/player/next');
     action = 'next';
@@ -486,7 +538,7 @@ async function handleSpotifyVoiceCommand(cfg, transcript) {
   } else if (!action && /\b(restart|restart song|restart track|restart this song|start over|start this song over|replay|play from the beginning|beginning)\b/.test(normalized)) {
     const player = await spotifyRequest(cfg, 'GET', '/v1/me/player').catch(() => null);
     if (player?.is_playing === false) {
-      result = await spotifyRequest(cfg, 'PUT', '/v1/me/player/play', { position_ms: 0 });
+      result = await spotifyPlay(cfg, { position_ms: 0 });
     } else {
       result = await spotifyRequest(cfg, 'PUT', '/v1/me/player/seek?position_ms=0');
     }
@@ -1179,7 +1231,7 @@ async function main() {
         let result = null;
         switch (action) {
           case 'play':
-            result = await spotifyRequest(cfg, 'PUT', '/v1/me/player/play', body.deviceId ? { device_id: body.deviceId } : undefined);
+            result = await spotifyPlay(cfg, undefined, { skipIfAlreadyPlaying: true });
             break;
           case 'pause':
             result = await spotifyRequest(cfg, 'PUT', '/v1/me/player/pause');

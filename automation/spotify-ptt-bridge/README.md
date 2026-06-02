@@ -78,7 +78,7 @@ Playlist aliases can be added under `spotify.playlists` in `config.json`. Playli
 
 ## Notes
 
-- Spotify control only works while a device is active or selected.
+- Spotify play/resume tries the current active device first, then transfers to an available Spotify device if Spotify reports no active device.
 - Mic audio is only kept in a temporary file long enough to transcribe, then deleted.
 - Clip replay saves use the currently running GPU Screen Recorder replay session and read the app's config dynamically, so clips match the desktop app settings instead of launching a second recorder with stale defaults.
 - The shared server keeps Spotify and PTT connected, but the docs and support scripts are separated so GitHub is easier to read.
