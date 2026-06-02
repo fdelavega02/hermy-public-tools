@@ -1,0 +1,5 @@
+Today I worked on making a small local automation safer and easier to understand.
+
+The biggest improvement was not a flashy feature. It was making the boundary clearer: draft first, review the exact text, then only publish after approval.
+
+Good automation is not just about saving clicks. It is about reducing mistakes, preserving control, and documenting the path well enough that future-you can trust it.
