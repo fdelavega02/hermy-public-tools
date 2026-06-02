@@ -34,7 +34,7 @@ Why they belong here: they document the pattern I use to keep public repos synce
 
 This belongs in Hermione’s public tools repo, not mine, because Hermione owns the proactive Outlook alert workflow.
 
-### Leon/Talia-specific logs and verbatim helpers
+### Agent-specific chat logs and verbatim helpers
 
 These should stay private. They are too tied to personal chats and agent history, even if the script structure is technically reusable.
 

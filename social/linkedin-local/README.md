@@ -28,7 +28,7 @@ This is a local-only starter for Francisco's LinkedIn posting workflow:
 2. Change into this project:
 
 ```bash
-cd /home/fdelavega02/.openclaw/workspace-twin/social/linkedin-local
+cd social/linkedin-local
 ```
 
 3. Install dependencies:

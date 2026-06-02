@@ -13,7 +13,7 @@ Hermione
 - OpenAI Codex assistant turns: 9
 - xAI assistant turns: 0
 
-Leon clone
+Project helper
 - OpenAI Codex assistant turns: 3
 - xAI assistant turns: 0
 ```
