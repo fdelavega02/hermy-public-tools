@@ -63,6 +63,7 @@ npm run check          # syntax-check server.mjs
 npm run ptt:toggle     # toggle PTT from CLI
 npm run ptt:x11        # start X11 global hotkey listener
 npm run ptt:raw        # start raw keyboard listener
+./ptt/clip-replay.sh save   # save the active GPU Screen Recorder replay buffer
 ```
 
 ## Playlist voice commands
@@ -79,4 +80,5 @@ Playlist aliases can be added under `spotify.playlists` in `config.json`. Playli
 
 - Spotify control only works while a device is active or selected.
 - Mic audio is only kept in a temporary file long enough to transcribe, then deleted.
+- Clip replay saves use the currently running GPU Screen Recorder replay session and read the app's config dynamically, so clips match the desktop app settings instead of launching a second recorder with stale defaults.
 - The shared server keeps Spotify and PTT connected, but the docs and support scripts are separated so GitHub is easier to read.
