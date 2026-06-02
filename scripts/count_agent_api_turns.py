@@ -9,14 +9,17 @@ import re
 from zoneinfo import ZoneInfo
 
 BASE = Path('/home/fdelavega02/.openclaw/agents')
+WORKSPACE = Path('/home/fdelavega02/.openclaw/workspace-twin')
+BRIDGE_VOICE_LOG = WORKSPACE / 'automation/spotify-ptt-bridge/state/voice-command.log'
 TZ = ZoneInfo('America/Indianapolis')
-parser = argparse.ArgumentParser(description='Count per-agent Codex and xAI assistant API turns for a date.')
+parser = argparse.ArgumentParser(description='Count per-agent Codex, xAI assistant turns, and locally logged ElevenLabs TTS uses for a date.')
 parser.add_argument('--date', help='YYYY-MM-DD in America/Indianapolis, default today')
 args = parser.parse_args()
 TARGET_DATE = datetime.strptime(args.date, '%Y-%m-%d').date() if args.date else datetime.now(TZ).date()
 CODEX_PROVIDERS = {'openai-codex'}
 CODEX_APIS = {'openai-codex-responses'}
 XAI_PROVIDERS = {'xai'}
+ELEVENLABS_AUDIT_CONTEXTS = {'elevenlabs.tts', 'elevenlabs.voices'}
 SKIP_AGENTS = {'leon-kennedy', 'leon-kennedy-archived'}
 PRIMARY_SESSION_RE = re.compile(r'^[0-9a-f-]{36}\.jsonl$')
 
@@ -48,12 +51,53 @@ def bucket_for(msg: dict) -> str | None:
     return None
 
 
+def has_elevenlabs_audit(obj) -> bool:
+    stack = [obj]
+    while stack:
+        value = stack.pop()
+        if isinstance(value, dict):
+            if value.get('auditContext') in ELEVENLABS_AUDIT_CONTEXTS:
+                return True
+            stack.extend(value.values())
+        elif isinstance(value, list):
+            stack.extend(value)
+    return False
+
+
+def add_bridge_elevenlabs_counts(counts: dict) -> None:
+    """Count local PTT speech events.
+
+    OpenClaw session JSONL files record assistant/model turns, but the Spotify/PTT
+    bridge invokes `openclaw infer tts convert` from its own Node process. Those
+    CLI TTS calls do not currently create per-agent session message records, so
+    the bridge's voice-command log is the durable local evidence for successful
+    PTT speech attempts.
+    """
+    if not BRIDGE_VOICE_LOG.exists():
+        return
+    twin = counts.setdefault('twin', {'codex': 0, 'xai': 0, 'elevenlabs': 0})
+    with BRIDGE_VOICE_LOG.open('r', encoding='utf-8', errors='ignore') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            dt = parse_ts(obj.get('at'))
+            if not dt or dt.date() != TARGET_DATE:
+                continue
+            if obj.get('assistantText') and not obj.get('error'):
+                twin['elevenlabs'] += 1
+
+
 counts = {}
 for agent_dir in sorted(BASE.iterdir()):
     if not agent_dir.is_dir() or agent_dir.name in SKIP_AGENTS:
         continue
     sessions_dir = agent_dir / 'sessions'
-    agent_counts = {'codex': 0, 'xai': 0}
+    agent_counts = {'codex': 0, 'xai': 0, 'elevenlabs': 0}
     if sessions_dir.exists():
         for path in sessions_dir.iterdir():
             if not path.is_file() or not PRIMARY_SESSION_RE.match(path.name):
@@ -67,35 +111,43 @@ for agent_dir in sorted(BASE.iterdir()):
                         obj = json.loads(line)
                     except json.JSONDecodeError:
                         continue
-                    if obj.get('type') != 'message':
-                        continue
-                    msg = obj.get('message') or {}
-                    if msg.get('role') != 'assistant':
-                        continue
-                    bucket = bucket_for(msg)
-                    if not bucket:
-                        continue
                     dt = parse_ts(obj.get('timestamp'))
                     if not dt or dt.date() != TARGET_DATE:
                         continue
-                    agent_counts[bucket] += 1
+                    if obj.get('type') == 'message':
+                        msg = obj.get('message') or {}
+                        if msg.get('role') != 'assistant':
+                            continue
+                        bucket = bucket_for(msg)
+                        if not bucket:
+                            continue
+                        agent_counts[bucket] += 1
+                        continue
+                    if has_elevenlabs_audit(obj):
+                        agent_counts['elevenlabs'] += 1
     counts[agent_dir.name] = agent_counts
+
+add_bridge_elevenlabs_counts(counts)
 
 sorted_items = sorted(
     counts.items(),
-    key=lambda kv: (-(kv[1]['codex'] + kv[1]['xai']), -kv[1]['codex'], -kv[1]['xai'], kv[0]),
+    key=lambda kv: (-(kv[1]['codex'] + kv[1]['xai'] + kv[1]['elevenlabs']), -kv[1]['codex'], -kv[1]['xai'], -kv[1]['elevenlabs'], kv[0]),
 )
 
 total_codex = 0
 total_xai = 0
+total_elevenlabs = 0
 for agent, agent_counts in sorted_items:
     codex = agent_counts['codex']
     xai = agent_counts['xai']
-    total = codex + xai
+    elevenlabs = agent_counts['elevenlabs']
+    total = codex + xai + elevenlabs
     total_codex += codex
     total_xai += xai
-    print(f'- {agent}: total {total} | codex {codex} | xAI {xai}')
+    total_elevenlabs += elevenlabs
+    print(f'- {agent}: total {total} | codex {codex} | xAI {xai} | elevenlabs {elevenlabs}')
 
-print(f'Total: {total_codex + total_xai}')
+print(f'Total: {total_codex + total_xai + total_elevenlabs}')
 print(f'Codex total: {total_codex}')
 print(f'xAI total: {total_xai}')
+print(f'ElevenLabs total: {total_elevenlabs}')

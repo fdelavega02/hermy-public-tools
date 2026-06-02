@@ -2,7 +2,7 @@
 """X11 global hold-to-talk listener for Spotify/OpenClaw PTT.
 
 No root required. Grabs only:
-- Ctrl+Alt+Space => spotify profile
+- Ctrl+F2        => spotify profile
 - Ctrl+F1        => voice profile
 
 Uses XGrabKey directly instead of KDE global shortcuts so KeyPress/KeyRelease are
@@ -38,8 +38,8 @@ GrabModeAsync = 1
 CurrentTime = 0
 True_ = 1
 False_ = 0
-XK_space = 0x20
 XK_F1 = 0xFFBE
+XK_F2 = 0xFFBF
 
 running = True
 active_profile: str | None = None
@@ -155,14 +155,14 @@ def main() -> int:
         return 2
 
     root = x11.XDefaultRootWindow(display)
-    space_keycode = int(x11.XKeysymToKeycode(display, XK_space))
     f1_keycode = int(x11.XKeysymToKeycode(display, XK_F1))
+    f2_keycode = int(x11.XKeysymToKeycode(display, XK_F2))
     keycodes = {
-        space_keycode: "spotify",
+        f2_keycode: "spotify",
         f1_keycode: "voice",
     }
     profile_mods = {
-        "spotify": ControlMask | Mod1Mask,
+        "spotify": ControlMask,
         "voice": ControlMask,
     }
     lock_variants = [0, LockMask, Mod2Mask, LockMask | Mod2Mask]
@@ -206,7 +206,7 @@ def main() -> int:
                 continue
             if event.type == KeyPress and active_profile is None:
                 active_profile = profile
-                log("ptt-start", profile=profile, keycode=keycode, state=int(event.xkey.state), chord=("ctrl+f1" if profile == "voice" else "ctrl+alt+space"))
+                log("ptt-start", profile=profile, keycode=keycode, state=int(event.xkey.state), chord=("ctrl+f1" if profile == "voice" else "ctrl+f2"))
                 if not args.dry_run:
                     try:
                         post(args.server, "/api/ptt/start", deliver=(profile == "voice"), profile=profile)
