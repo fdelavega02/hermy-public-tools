@@ -13,9 +13,14 @@ This section contains the PTT, voice relay, hotkey, and clip-replay support scri
 
 Current listener behavior:
 
-- `Ctrl+Alt+Space` starts the Spotify voice-command profile.
-- `Ctrl+F1` starts the general voice relay profile in the X11 listener.
-- The raw input listener also supports the configured keyboard-device combos in its script header.
+- X11 listener (`x11-ptt-listener.py`):
+  - `Ctrl+F2` holds the Spotify voice-command profile.
+  - `Ctrl+F1` holds the general voice relay profile.
+- Raw input listener (`raw-ptt-listener.py`):
+  - `Ctrl+Alt+Space` holds the Spotify voice-command profile.
+  - `Ctrl+Alt+V` holds the general voice relay profile.
+
+Both listeners call `/api/ptt/start` on press and `/api/ptt/stop` on release.
 
 ## Clip replay
 
