@@ -3,21 +3,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 import re
 from zoneinfo import ZoneInfo
 
-BASE = Path('/home/fdelavega02/.openclaw/agents')
-WORKSPACE = Path('/home/fdelavega02/.openclaw/workspace-twin')
-BRIDGE_VOICE_LOG = WORKSPACE / 'automation/spotify-ptt-bridge/state/voice-command.log'
 TZ = ZoneInfo('America/Indianapolis')
 parser = argparse.ArgumentParser(description='Count per-agent Codex, xAI assistant turns, and locally logged ElevenLabs TTS uses for a date.')
 parser.add_argument('--date', help='YYYY-MM-DD in America/Indianapolis, default today')
+parser.add_argument('--openclaw-home', default=os.environ.get('OPENCLAW_HOME', str(Path.home() / '.openclaw')), help='OpenClaw home directory, default $OPENCLAW_HOME or ~/.openclaw')
+parser.add_argument('--workspace', default=os.environ.get('TWIN_WORKSPACE'), help='Workspace containing the Spotify/PTT bridge, default <openclaw-home>/workspace-twin')
 args = parser.parse_args()
+OPENCLAW_HOME = Path(args.openclaw_home).expanduser()
+BASE = OPENCLAW_HOME / 'agents'
+WORKSPACE = Path(args.workspace).expanduser() if args.workspace else OPENCLAW_HOME / 'workspace-twin'
+BRIDGE_VOICE_LOG = WORKSPACE / 'automation/spotify-ptt-bridge/state/voice-command.log'
 TARGET_DATE = datetime.strptime(args.date, '%Y-%m-%d').date() if args.date else datetime.now(TZ).date()
-CODEX_PROVIDERS = {'openai-codex'}
-CODEX_APIS = {'openai-codex-responses'}
+CODEX_PROVIDERS = {'openai-codex', 'codex'}
+CODEX_APIS = {'openai-codex-responses', 'openai-chatgpt-responses'}
 XAI_PROVIDERS = {'xai'}
 ELEVENLABS_AUDIT_CONTEXTS = {'elevenlabs.tts', 'elevenlabs.voices'}
 SKIP_AGENTS = {'leon-kennedy', 'leon-kennedy-archived'}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd /home/fdelavega02/.openclaw/workspace-twin/social/linkedin-local
+cd "$(dirname "${BASH_SOURCE[0]}")"
 npm run post-approved -- "$@"

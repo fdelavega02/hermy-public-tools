@@ -2,6 +2,8 @@
 
 A quick map of what belongs in this public repo and what should stay elsewhere.
 
+This index is for stable structure, not a day-to-day shortlist. Candidate projects that change with the day belong in a current daily dashboard or similar working note, with fake examples kept under `examples/` when public documentation needs to show the pattern.
+
 ## Current public-safe projects
 
 ### LinkedIn local posting helper

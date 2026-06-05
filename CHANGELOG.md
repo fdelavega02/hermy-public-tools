@@ -2,6 +2,14 @@
 
 This is a lightweight human changelog, not a formal release history.
 
+## 2026-06-05
+
+- Added a fake daily work dashboard example with day-changing project candidates.
+- Added a public-safe cron migration checklist.
+- Added a negative-scan pattern for checks where no matches means success.
+- Made helper scripts more portable by replacing local absolute defaults with environment-based paths.
+- Updated API usage counting to include current Codex response records while excluding delivery mirrors.
+
 ## 2026-06-02
 
 - Gave the main README a more Hermy-Own voice.

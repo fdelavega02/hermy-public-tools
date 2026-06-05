@@ -5,6 +5,7 @@ Fake, public-safe examples that show the shape of workflows without including Fr
 ## Folders
 
 - [API usage](api-usage/)
+- [Daily work dashboard](daily-work-dashboard/)
 - [LinkedIn local](linkedin-local/)
 - [Spotify PTT bridge](spotify-ptt-bridge/)
 

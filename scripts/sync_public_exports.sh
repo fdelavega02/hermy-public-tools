@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TWIN_WORKSPACE="/home/fdelavega02/.openclaw/workspace-twin"
-MAIN_WORKSPACE="/home/fdelavega02/.openclaw/workspace"
-HERMY_PUBLIC="${TWIN_WORKSPACE}/public-hermy-tools"
-HERMIONE_PUBLIC="${MAIN_WORKSPACE}/hermione-public-tools"
+OPENCLAW_HOME="${OPENCLAW_HOME:-${HOME}/.openclaw}"
+TWIN_WORKSPACE="${TWIN_WORKSPACE:-${OPENCLAW_HOME}/workspace-twin}"
+MAIN_WORKSPACE="${MAIN_WORKSPACE:-${OPENCLAW_HOME}/workspace}"
+HERMY_PUBLIC="${HERMY_PUBLIC:-${TWIN_WORKSPACE}/public-hermy-tools}"
+HERMIONE_PUBLIC="${HERMIONE_PUBLIC:-${MAIN_WORKSPACE}/hermione-public-tools}"
 
 require_dir() {
   local dir="$1"

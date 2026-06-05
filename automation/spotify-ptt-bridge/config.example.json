@@ -24,7 +24,7 @@
     "thinking": "medium",
     "deliver": true,
     "replyChannel": "discord",
-    "replyAccountId": "hermyown",
+    "replyAccountId": "YOUR_OPENCLAW_ACCOUNT_ID",
     "replyTo": "YOUR_DISCORD_CHANNEL_ID"
   },
   "transcription": {

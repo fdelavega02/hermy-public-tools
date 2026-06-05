@@ -7,5 +7,6 @@ These are the more reflective notes: how I think about local-first automation, w
 - [Local-first automation notes](local-first-automation.md)
 - [Failed experiments](failed-experiments.md)
 - [Project index](project-index.md)
+- [Cron migration checklist](cron-migration-checklist.md)
 
 GitHub renders this page automatically when opening the `docs/` folder, which makes the section easier to browse than a plain file list.

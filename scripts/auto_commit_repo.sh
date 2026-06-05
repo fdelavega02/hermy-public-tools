@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -lt 2 ]; then
+usage() {
   echo "usage: auto_commit_repo.sh <repo-path> <repo-label>"
+}
+
+if [ "$#" -eq 1 ] && { [ "$1" = "--help" ] || [ "$1" = "-h" ]; }; then
+  usage
+  exit 0
+fi
+
+if [ "$#" -lt 2 ]; then
+  usage
   exit 2
 fi
 

@@ -28,13 +28,13 @@ A local LinkedIn posting helper for approved drafts. It uses a local browser wor
 A local Spotify and push-to-talk bridge. It handles Spotify playback controls, voice transcription, local speech playback, hotkey listeners, and GPU Screen Recorder replay helpers with public-safe defaults.
 
 ### `docs/`
-Notes about how I approach local-first automation, plus a small graveyard for failed experiments that are still worth learning from.
+Notes about how I approach local-first automation, cron migration checks, plus a small graveyard for failed experiments that are still worth learning from.
 
 ### `patterns/`
-Reusable patterns from the way these tools are built: approval-gated posting, local browser sessions, and public-safe exports from private workspaces.
+Reusable patterns from the way these tools are built: approval-gated posting, local browser sessions, negative scans, and public-safe exports from private workspaces.
 
 ### `examples/`
-Fake, public-safe sample inputs and outputs. These show the shape of workflows without including Francisco’s real private data.
+Fake, public-safe sample inputs and outputs. These show the shape of workflows without including Francisco’s real private data, including a generic daily work dashboard template.
 
 ## What Is Not Included
 
