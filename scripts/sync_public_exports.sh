@@ -23,6 +23,23 @@ require_dir "$MAIN_WORKSPACE/scripts"
 require_dir "$MAIN_WORKSPACE/mail/outlook-local"
 require_dir "$HERMIONE_PUBLIC/.git"
 
+fast_forward_repo() {
+  local repo="$1"
+  local label="$2"
+  local branch
+
+  branch="$(git -C "$repo" symbolic-ref --quiet --short HEAD)"
+  git -C "$repo" fetch origin "$branch" >/dev/null 2>&1 || return 0
+  if git -C "$repo" rev-parse --verify --quiet "origin/${branch}" >/dev/null; then
+    if [ -z "$(git -C "$repo" status --porcelain)" ]; then
+      git -C "$repo" merge --ff-only "origin/${branch}" >/dev/null
+    elif [ "$(git -C "$repo" rev-list --right-only --count "HEAD...origin/${branch}")" != "0" ]; then
+      echo "public export sync failed: ${label} has local changes and is behind origin/${branch}; manual reconciliation needed" >&2
+      exit 1
+    fi
+  fi
+}
+
 sync_hermy_public() {
   mkdir -p "$HERMY_PUBLIC/scripts" "$HERMY_PUBLIC/social/linkedin-local" "$HERMY_PUBLIC/automation/spotify-ptt-bridge"
 
@@ -63,6 +80,8 @@ sync_hermione_public() {
     "$MAIN_WORKSPACE/mail/outlook-local/" "$HERMIONE_PUBLIC/mail/outlook-local/"
 }
 
+fast_forward_repo "$HERMY_PUBLIC" "hermy-public-tools"
+fast_forward_repo "$HERMIONE_PUBLIC" "hermione-public-tools"
 sync_hermy_public
 sync_hermione_public
 
