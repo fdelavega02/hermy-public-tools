@@ -104,6 +104,7 @@ Important constraints:
 - The machine and OpenClaw still need to be running at post time.
 - LinkedIn may still interrupt with expired login, challenge, CAPTCHA, or UI changes.
 - Only use this mode for a draft that was explicitly approved in advance.
+- If the browser hangs or screenshot capture fails after clicking Post, verify the post through recent activity before declaring failure or success.
 
 ## Notes
 

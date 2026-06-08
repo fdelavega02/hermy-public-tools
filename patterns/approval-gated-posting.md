@@ -25,3 +25,5 @@ Recommended modes:
 - Keep browser state under ignored `state/`.
 - Keep generated post files and screenshots under ignored `output/`.
 - Do not use autonomous publishing for drafts that were not explicitly approved.
+- After any publish click, verify the public result independently before reporting success. A browser screenshot or protocol error after the click may mean verification failed, not that publishing failed.
+- If browser automation hangs after the publish action, stop the stuck browser process and confirm the result through the site's normal activity or profile view.
