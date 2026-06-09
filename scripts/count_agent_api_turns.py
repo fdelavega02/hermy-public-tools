@@ -19,6 +19,7 @@ OPENCLAW_HOME = Path(args.openclaw_home).expanduser()
 BASE = OPENCLAW_HOME / 'agents'
 WORKSPACE = Path(args.workspace).expanduser() if args.workspace else OPENCLAW_HOME / 'workspace-twin'
 BRIDGE_VOICE_LOG = WORKSPACE / 'automation/spotify-ptt-bridge/state/voice-command.log'
+STREAM_TTS_AUDIO_DIR = WORKSPACE / 'automation/streamlabels-hermy-bridge/output/audio'
 TARGET_DATE = datetime.strptime(args.date, '%Y-%m-%d').date() if args.date else datetime.now(TZ).date()
 CODEX_PROVIDERS = {'openai-codex', 'codex'}
 CODEX_APIS = {'openai-codex-responses', 'openai-chatgpt-responses'}
@@ -96,6 +97,33 @@ def add_bridge_elevenlabs_counts(counts: dict) -> None:
                 twin['elevenlabs'] += 1
 
 
+def parse_stream_tts_audio_ts(path: Path):
+    # Files are named like 2026-06-09T02-14-30-202Z-channel-points-Talk_to_Hermy.mp3.
+    stamp = path.name[:24]
+    try:
+        dt = datetime.strptime(stamp, '%Y-%m-%dT%H-%M-%S-%fZ')
+    except ValueError:
+        return None
+    return dt.replace(tzinfo=timezone.utc).astimezone(TZ)
+
+
+def add_stream_elevenlabs_counts(counts: dict) -> None:
+    """Count Hermy-TV stream TTS calls from generated audio artifacts.
+
+    The Streamlabs/Twitch receiver calls ElevenLabs from its own Node service,
+    outside OpenClaw session JSONL accounting. A generated MP3 is the durable
+    evidence that the ElevenLabs request succeeded, even if local playback later
+    failed or timed out.
+    """
+    if not STREAM_TTS_AUDIO_DIR.exists():
+        return
+    twitch = counts.setdefault('twitch', {'codex': 0, 'xai': 0, 'elevenlabs': 0})
+    for path in STREAM_TTS_AUDIO_DIR.glob('*.mp3'):
+        dt = parse_stream_tts_audio_ts(path)
+        if dt and dt.date() == TARGET_DATE:
+            twitch['elevenlabs'] += 1
+
+
 counts = {}
 for agent_dir in sorted(BASE.iterdir()):
     if not agent_dir.is_dir() or agent_dir.name in SKIP_AGENTS:
@@ -132,6 +160,7 @@ for agent_dir in sorted(BASE.iterdir()):
     counts[agent_dir.name] = agent_counts
 
 add_bridge_elevenlabs_counts(counts)
+add_stream_elevenlabs_counts(counts)
 
 sorted_items = sorted(
     counts.items(),
