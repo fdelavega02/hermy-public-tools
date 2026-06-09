@@ -26,12 +26,14 @@ const DEFAULTS = {
     scopes: ['user-read-playback-state', 'user-modify-playback-state', 'playlist-read-private', 'playlist-read-collaborative'],
   },
   openclaw: {
+    agentId: '',
     sessionId: '',
     thinking: 'medium',
     deliver: true,
     replyChannel: 'discord',
     replyAccountId: '',
     replyTo: '',
+    profiles: {},
   },
   transcription: {
     model: '',
@@ -567,7 +569,7 @@ async function handleTranscript(cfg, transcript, options = {}) {
     return { command: clipCommand };
   }
 
-  const command = profile === 'voice'
+  const command = profile !== 'spotify'
     ? null
     : await handleSpotifyVoiceCommand(cfg, transcript).catch(error => ({ handled: true, action: 'spotify-error', error: error?.message || String(error), assistantText: `Spotify command failed: ${error?.message || String(error)}` }));
   if (command?.handled) {
@@ -575,7 +577,7 @@ async function handleTranscript(cfg, transcript, options = {}) {
     return { command };
   }
   const deliverToDiscord = options.deliver === true;
-  const sent = await sendTranscriptToOpenClaw(cfg, transcript, { deliverToDiscord });
+  const sent = await sendTranscriptToOpenClaw(cfg, transcript, { deliverToDiscord, profile });
   if (sent) {
     await logVoiceCommand({ transcript, profile, type: 'openclaw', assistantText: sent?.assistantText || null, error: sent?.localSpeech?.error || null, reason: options.reason || null });
     return { sent };
@@ -586,7 +588,8 @@ async function handleTranscript(cfg, transcript, options = {}) {
 
 async function sendTranscriptToOpenClaw(cfg, transcript, options = {}) {
   if (!transcript) return null;
-  if (!cfg.openclaw?.sessionId) {
+  const profileCfg = resolveOpenClawProfile(cfg, options.profile);
+  if (!profileCfg?.sessionId) {
     return { skipped: true, reason: 'No openclaw.sessionId configured' };
   }
   const voicePrompt = [
@@ -596,11 +599,13 @@ async function sendTranscriptToOpenClaw(cfg, transcript, options = {}) {
     '',
     transcript,
   ].join('\n');
-  const args = ['agent', '--session-id', cfg.openclaw.sessionId, '--message', voicePrompt, '--thinking', cfg.openclaw.thinking ?? 'medium', '--timeout', '120', '--json'];
-  if (options.deliverToDiscord === true) {
-    if (cfg.openclaw.replyChannel) args.push('--reply-channel', cfg.openclaw.replyChannel);
-    if (cfg.openclaw.replyAccountId) args.push('--reply-account', cfg.openclaw.replyAccountId);
-    if (cfg.openclaw.replyTo) args.push('--reply-to', cfg.openclaw.replyTo);
+  const args = ['agent'];
+  if (profileCfg.agentId) args.push('--agent', profileCfg.agentId);
+  args.push('--session-id', profileCfg.sessionId, '--message', voicePrompt, '--thinking', profileCfg.thinking ?? 'medium', '--timeout', '120', '--json');
+  if (options.deliverToDiscord === true && profileCfg.deliver !== false) {
+    if (profileCfg.replyChannel) args.push('--reply-channel', profileCfg.replyChannel);
+    if (profileCfg.replyAccountId) args.push('--reply-account', profileCfg.replyAccountId);
+    if (profileCfg.replyTo) args.push('--reply-to', profileCfg.replyTo);
     args.push('--deliver');
   }
   const { stdout, stderr } = await runOpenClaw(args, 240);
@@ -612,6 +617,15 @@ async function sendTranscriptToOpenClaw(cfg, transcript, options = {}) {
     localSpeech = await trySpeakTextLocally(assistantText);
   }
   return { stdout, stderr, assistantText, localSpeech };
+}
+
+function resolveOpenClawProfile(cfg, profile) {
+  const base = cfg.openclaw ?? {};
+  const profileName = String(profile || '').trim();
+  const overrides = profileName ? (base.profiles?.[profileName] ?? {}) : {};
+  const merged = { ...base, ...overrides };
+  delete merged.profiles;
+  return merged;
 }
 
 function makeTempRecordingPath() {

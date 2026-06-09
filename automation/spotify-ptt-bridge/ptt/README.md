@@ -16,6 +16,7 @@ Current listener behavior:
 - X11 listener (`x11-ptt-listener.py`):
   - `Ctrl+F2` holds the Spotify voice-command profile.
   - `Ctrl+F1` holds the general voice relay profile.
+  - `Ctrl+F3` holds the Hermy-TV voice relay profile.
 
 The retired raw input listener attempted to use:
 

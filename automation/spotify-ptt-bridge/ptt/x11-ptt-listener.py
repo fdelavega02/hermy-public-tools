@@ -4,6 +4,7 @@
 No root required. Grabs only:
 - Ctrl+F2        => spotify profile
 - Ctrl+F1        => voice profile
+- Ctrl+F3        => hermy-tv profile
 
 Uses XGrabKey directly instead of KDE global shortcuts so KeyPress/KeyRelease are
 handled by this process.
@@ -40,6 +41,7 @@ True_ = 1
 False_ = 0
 XK_F1 = 0xFFBE
 XK_F2 = 0xFFBF
+XK_F3 = 0xFFC0
 
 running = True
 active_profile: str | None = None
@@ -157,13 +159,16 @@ def main() -> int:
     root = x11.XDefaultRootWindow(display)
     f1_keycode = int(x11.XKeysymToKeycode(display, XK_F1))
     f2_keycode = int(x11.XKeysymToKeycode(display, XK_F2))
+    f3_keycode = int(x11.XKeysymToKeycode(display, XK_F3))
     keycodes = {
         f2_keycode: "spotify",
         f1_keycode: "voice",
+        f3_keycode: "hermy-tv",
     }
     profile_mods = {
         "spotify": ControlMask,
         "voice": ControlMask,
+        "hermy-tv": ControlMask,
     }
     lock_variants = [0, LockMask, Mod2Mask, LockMask | Mod2Mask]
 
@@ -206,10 +211,15 @@ def main() -> int:
                 continue
             if event.type == KeyPress and active_profile is None:
                 active_profile = profile
-                log("ptt-start", profile=profile, keycode=keycode, state=int(event.xkey.state), chord=("ctrl+f1" if profile == "voice" else "ctrl+f2"))
+                chord = {
+                    "voice": "ctrl+f1",
+                    "spotify": "ctrl+f2",
+                    "hermy-tv": "ctrl+f3",
+                }.get(profile, profile)
+                log("ptt-start", profile=profile, keycode=keycode, state=int(event.xkey.state), chord=chord)
                 if not args.dry_run:
                     try:
-                        post(args.server, "/api/ptt/start", deliver=(profile == "voice"), profile=profile)
+                        post(args.server, "/api/ptt/start", deliver=(profile != "spotify"), profile=profile)
                         log("ptt-request-ok", endpoint="/api/ptt/start", profile=profile)
                     except Exception as exc:  # noqa: BLE001
                         log("ptt-request-error", endpoint="/api/ptt/start", profile=profile, error=str(exc))
@@ -225,13 +235,13 @@ def main() -> int:
                 active_profile = None
                 log("ptt-stop", profile=profile, keycode=keycode, state=int(event.xkey.state))
                 if not args.dry_run:
-                    post_background(args.server, "/api/ptt/stop", deliver=(profile == "voice"), profile=profile)
+                    post_background(args.server, "/api/ptt/stop", deliver=(profile != "spotify"), profile=profile)
     except BaseException as exc:  # noqa: BLE001
         log("fatal", error=repr(exc))
         raise
     finally:
         if active_profile is not None and not args.dry_run:
-            post_background(args.server, "/api/ptt/stop", deliver=(active_profile == "voice"), profile=active_profile)
+            post_background(args.server, "/api/ptt/stop", deliver=(active_profile != "spotify"), profile=active_profile)
         for keycode, profile in keycodes.items():
             base_mods = profile_mods[profile]
             for extra in lock_variants:

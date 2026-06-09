@@ -20,12 +20,21 @@
     }
   },
   "openclaw": {
+    "agentId": "",
     "sessionId": "YOUR_OPENCLAW_SESSION_ID",
     "thinking": "medium",
     "deliver": true,
     "replyChannel": "discord",
     "replyAccountId": "YOUR_OPENCLAW_ACCOUNT_ID",
-    "replyTo": "YOUR_DISCORD_CHANNEL_ID"
+    "replyTo": "YOUR_DISCORD_CHANNEL_ID",
+    "profiles": {
+      "hermy-tv": {
+        "agentId": "twitch",
+        "sessionId": "YOUR_HERMY_TV_VOICE_SESSION_ID",
+        "thinking": "medium",
+        "deliver": false
+      }
+    }
   },
   "transcription": {
     "model": "",
