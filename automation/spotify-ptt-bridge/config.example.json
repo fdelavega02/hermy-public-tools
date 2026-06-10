@@ -36,6 +36,10 @@
       }
     }
   },
+  "output": {
+    "reactionFile": "../streamlabels-hermy-bridge/output/hermy_reaction.txt",
+    "clearAfterMs": 15000
+  },
   "transcription": {
     "model": "",
     "language": "en"

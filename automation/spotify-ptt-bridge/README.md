@@ -56,6 +56,10 @@ systemctl --user status spotify-ptt-bridge.service
 
 It is enabled to start on login.
 
+## OBS reaction text
+
+If `output.reactionFile` is set in `config.json`, Hermy-TV replies from the `Ctrl+F3` voice lane are also written to that file so OBS can show the same text that gets spoken locally.
+
 ## Quick commands
 
 ```bash

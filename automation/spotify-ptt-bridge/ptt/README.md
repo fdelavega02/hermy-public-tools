@@ -27,6 +27,8 @@ That approach failed on this PC because reading `/dev/input/...` requires elevat
 
 The active X11 listener calls `/api/ptt/start` on press and `/api/ptt/stop` on release.
 
+Hermy-TV replies from `Ctrl+F3` also mirror into the OBS reaction text file configured in `config.json` so the on-screen reaction matches the spoken reply.
+
 ## Clip replay
 
 `clip-replay.sh` is a thin control helper for GPU Screen Recorder replay mode:

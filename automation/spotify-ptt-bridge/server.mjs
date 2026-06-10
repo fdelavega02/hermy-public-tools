@@ -35,6 +35,10 @@ const DEFAULTS = {
     replyTo: '',
     profiles: {},
   },
+  output: {
+    reactionFile: '../streamlabels-hermy-bridge/output/hermy_reaction.txt',
+    clearAfterMs: 15000,
+  },
   transcription: {
     model: '',
     language: 'en',
@@ -75,6 +79,7 @@ async function loadConfig() {
     server: { ...DEFAULTS.server, ...(cfg.server ?? {}) },
     spotify: { ...DEFAULTS.spotify, ...(cfg.spotify ?? {}), playlists: { ...(DEFAULTS.spotify.playlists ?? {}), ...(cfg.spotify?.playlists ?? {}) } },
     openclaw: { ...DEFAULTS.openclaw, ...(cfg.openclaw ?? {}) },
+    output: { ...DEFAULTS.output, ...(cfg.output ?? {}) },
     transcription: { ...DEFAULTS.transcription, ...(cfg.transcription ?? {}) },
     recorder: { ...DEFAULTS.recorder, ...(cfg.recorder ?? {}) },
     clip: { ...DEFAULTS.clip, ...(cfg.clip ?? {}) },
@@ -118,6 +123,28 @@ async function readJsonFile(filePath) {
 async function writeJsonFile(filePath, data) {
   await ensureState();
   await writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+}
+
+async function writeTextFile(filePath, text, clearAfterMs) {
+  if (!filePath) return null;
+  const resolvedPath = path.isAbsolute(filePath) ? filePath : path.join(ROOT, filePath);
+  await mkdir(path.dirname(resolvedPath), { recursive: true });
+  const body = `${String(text || '').trim()}\n`;
+  await writeFile(resolvedPath, body, 'utf8');
+  const clearDelay = Number(clearAfterMs) || 0;
+  if (clearDelay > 0) {
+    setTimeout(async () => {
+      try {
+        const current = await readFile(resolvedPath, 'utf8').catch(() => '');
+        if (current.trim() === String(text || '').trim()) {
+          await writeFile(resolvedPath, '', 'utf8');
+        }
+      } catch (error) {
+        console.error('[spotify-ptt] reaction clear failed:', error.message);
+      }
+    }, clearDelay).unref?.();
+  }
+  return resolvedPath;
 }
 
 async function loadTokens() {
@@ -612,6 +639,17 @@ async function sendTranscriptToOpenClaw(cfg, transcript, options = {}) {
   let payload = null;
   try { payload = JSON.parse(stdout); } catch { payload = { raw: stdout }; }
   const assistantText = extractAssistantText(payload);
+  if (assistantText && String(options.profile || '').trim() === 'hermy-tv') {
+    const reactionFile = cfg.output?.reactionFile;
+    try {
+      const writtenPath = await writeTextFile(reactionFile, assistantText, cfg.output?.clearAfterMs);
+      if (writtenPath) {
+        console.log(`[spotify-ptt] mirrored Hermy-TV reply to ${writtenPath}`);
+      }
+    } catch (error) {
+      console.error('[spotify-ptt] reaction mirror failed:', error.message);
+    }
+  }
   let localSpeech = null;
   if (assistantText) {
     localSpeech = await trySpeakTextLocally(assistantText);
