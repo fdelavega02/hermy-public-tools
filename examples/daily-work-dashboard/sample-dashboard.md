@@ -50,6 +50,15 @@ These are fake examples of day-changing options. A stable project index can poin
 - Browser-based workflow: Signed in locally, no public session data stored
 - Known issue: One helper logs too verbosely, review later
 
+## Runtime and Error Hygiene
+
+- Scheduler status: Enabled
+- Recent recurring jobs: No active failures
+- Search/index status: Current for the fake example notes
+- Delivery check: Last test message reached the expected private channel
+- Recovered warning: A previous no-match scan looked like a failure until the script handled that exit code explicitly
+- Next hygiene step: Replace any ad hoc one-off checks with maintained scripts before scheduling them
+
 ## Watch List
 
 - Queue spike after lunch

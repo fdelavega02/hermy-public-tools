@@ -2,6 +2,12 @@
 
 This is a lightweight human changelog, not a formal release history.
 
+## 2026-06-12
+
+- Expanded the fake daily dashboard example with runtime/error-hygiene checks.
+- Clarified recovered-tool-failure guidance for recurring jobs that should call maintained scripts instead of fragile ad hoc command fragments.
+- Cleaned untracked Python cache folders from the working tree.
+
 ## 2026-06-05
 
 - Added a fake daily work dashboard example with day-changing project candidates.

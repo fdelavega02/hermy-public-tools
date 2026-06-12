@@ -12,6 +12,7 @@ A lightweight checklist-style dashboard for starting or checking a workday. It g
 - Inbox and task status
 - Daily project candidates
 - Local automation status
+- Runtime and error hygiene
 - Watch list items
 - Recommended next actions
 
@@ -35,6 +36,15 @@ If you adapt it for a public repo or shared team template:
 3. Use broad categories instead of private workflow details.
 4. Keep credentials and session state outside the repo.
 5. Treat generated daily dashboards as private outputs unless deliberately sanitized.
+
+## Runtime Checks
+
+A useful private dashboard can mention whether recurring jobs, helper tools, and memory/search indexes are healthy. Public examples should keep that at the pattern level:
+
+- Say "scheduler healthy" instead of naming real jobs.
+- Say "delivery verified" instead of publishing account or channel routes.
+- Say "index current" instead of exposing private memory paths or search contents.
+- Summarize recovered failures in plain language so warning footers are not left unexplained.
 
 ## Files
 
