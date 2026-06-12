@@ -44,7 +44,6 @@ sync_hermy_public() {
   mkdir -p "$HERMY_PUBLIC/scripts" "$HERMY_PUBLIC/social/linkedin-local" "$HERMY_PUBLIC/automation/spotify-ptt-bridge"
 
   rsync -a --delete \
-    --exclude='leon_talia_daily_verbatim.py' \
     "$TWIN_WORKSPACE/scripts/" "$HERMY_PUBLIC/scripts/"
 
   rsync -a --delete \
