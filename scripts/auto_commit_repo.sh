@@ -71,6 +71,25 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
+case "$LABEL" in
+  hermy-public-tools|hermione-public-tools|Hermy-TV)
+    major_public_change=0
+    while IFS=$'\t' read -r status _path _rest; do
+      case "$status" in
+        A*|D*|R*|C*)
+          major_public_change=1
+          break
+          ;;
+      esac
+    done < <(git diff --cached --name-status)
+
+    if [ "$major_public_change" = "1" ] && ! git diff --cached --name-only -- README.md | grep -q '^README\.md$'; then
+      echo "auto-commit failed: ${LABEL} has a major public repo change but README.md was not updated; coordinate with the owner and refresh the README before pushing"
+      exit 1
+    fi
+    ;;
+esac
+
 STAMP="$(TZ=America/Indianapolis date '+%Y-%m-%d %H:%M %Z')"
 git commit -m "Auto-commit pending changes (${LABEL}, ${STAMP})"
 git push origin "$branch"
