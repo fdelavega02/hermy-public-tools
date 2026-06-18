@@ -6,6 +6,17 @@ import os from 'node:os';
 import crypto from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
+import {
+  appendRecentResponse,
+  appendSharedMemory,
+  buildAntiRepeatInstruction,
+  looksRepeatedResponse,
+  memoryBlock,
+  readRecentResponses,
+  readSharedMemory,
+} from '../streamlabels-hermy-bridge/ollama-memory.mjs';
+import { banterOverrideForText, isBanterOverrideText } from '../streamlabels-hermy-bridge/banter-overrides.mjs';
+import { appendGamblingDisclaimer, cleanHermyResponse } from '../streamlabels-hermy-bridge/response-cleanup.mjs';
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname));
@@ -15,6 +26,8 @@ const STATE_DIR = path.join(ROOT, 'state');
 const TOKEN_PATH = path.join(STATE_DIR, 'spotify-token.json');
 const AUTH_PATH = path.join(STATE_DIR, 'spotify-auth.json');
 const COMMAND_LOG_PATH = path.join(STATE_DIR, 'voice-command.log');
+const STREAM_HERMY_ROOT = path.resolve(ROOT, '../streamlabels-hermy-bridge');
+const STREAM_HERMY_CONFIG_PATH = path.join(STREAM_HERMY_ROOT, 'config.json');
 
 let pttSession = null;
 
@@ -603,6 +616,12 @@ async function handleTranscript(cfg, transcript, options = {}) {
     await logVoiceCommand({ transcript, profile, type: 'spotify', action: command.action, assistantText: command.assistantText, error: command.error || null, reason: options.reason || null });
     return { command };
   }
+  if (profile === 'hermy-tv') {
+    const sent = await sendTranscriptToOllamaHermy(cfg, transcript, { profile });
+    await logVoiceCommand({ transcript, profile, type: 'ollama-hermy-tv', assistantText: sent?.assistantText || null, error: sent?.localSpeech?.error || null, reason: options.reason || null, model: sent?.model || null });
+    return { sent };
+  }
+
   const deliverToDiscord = options.deliver === true;
   const sent = await sendTranscriptToOpenClaw(cfg, transcript, { deliverToDiscord, profile });
   if (sent) {
@@ -655,6 +674,123 @@ async function sendTranscriptToOpenClaw(cfg, transcript, options = {}) {
     localSpeech = await trySpeakTextLocally(assistantText);
   }
   return { stdout, stderr, assistantText, localSpeech };
+}
+
+async function loadOllamaHermyConfig() {
+  let streamCfg = {};
+  if (existsSync(STREAM_HERMY_CONFIG_PATH)) {
+    streamCfg = JSON.parse(await readFile(STREAM_HERMY_CONFIG_PATH, 'utf8'));
+  }
+  const ollama = {
+    endpoint: 'http://127.0.0.1:11434/api/generate',
+    model: 'hermy-tv:latest',
+    timeoutSeconds: 30,
+    loreFile: './ollama-tv-lore.md',
+    prompt: "You are Hermy-TV, Francisco's Twitch.tv stream cohost. Talk normally in plain, casual English. Keep replies concise.",
+    ...(streamCfg.ollama ?? {}),
+  };
+  const memory = {
+    enabled: true,
+    dir: './memory/ollama-tv',
+    ...(streamCfg.memory ?? {}),
+  };
+  const lorePath = resolveStreamHermyPath(ollama.loreFile);
+  const lore = ollama.loreFile
+    ? (await readFile(lorePath, 'utf8').catch(() => '')).trim()
+    : '';
+  return { ollama: { ...ollama, lore }, memory };
+}
+
+function resolveStreamHermyPath(filePath) {
+  if (!filePath) return filePath;
+  return path.isAbsolute(filePath) ? filePath : path.join(STREAM_HERMY_ROOT, filePath);
+}
+
+function buildOllamaHermyVoicePrompt(hermyCfg, sharedMemory, transcript, extraInstruction = '') {
+  return [
+    hermyCfg.ollama.prompt,
+    hermyCfg.ollama.lore ? `\nHermy-TV lore:\n${hermyCfg.ollama.lore}` : '',
+    memoryBlock(sharedMemory),
+    '',
+    'This message came from Francisco through Ctrl+F3 push-to-talk voice input.',
+    'Reply as Hermy-TV in normal text only. Keep it concise because ElevenLabs will read it aloud.',
+    extraInstruction,
+    '',
+    `Francisco: ${transcript}`,
+    'Hermy-TV:',
+  ].join('\n');
+}
+
+async function postOllamaHermy(hermyCfg, prompt) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Number(hermyCfg.ollama.timeoutSeconds || 30) * 1000);
+  try {
+    const response = await fetch(hermyCfg.ollama.endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: hermyCfg.ollama.model,
+        prompt,
+        stream: false,
+        options: {
+          temperature: 0.55,
+          top_p: 0.8,
+          num_predict: 160,
+        },
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`ollama ${response.status}: ${await response.text()}`);
+    }
+    const body = await response.json();
+    return String(body.response ?? '').trim();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function sendTranscriptToOllamaHermy(cfg, transcript, options = {}) {
+  const hermyCfg = await loadOllamaHermyConfig();
+  const override = banterOverrideForText(transcript);
+  const sharedMemory = override ? '' : await readSharedMemory(hermyCfg.memory, STREAM_HERMY_ROOT);
+  const recentResponses = await readRecentResponses(hermyCfg.memory, STREAM_HERMY_ROOT);
+  let assistantText = appendGamblingDisclaimer(
+    cleanHermyResponse(override || await postOllamaHermy(hermyCfg, buildOllamaHermyVoicePrompt(hermyCfg, sharedMemory, transcript))),
+    transcript,
+  );
+  if (!override && looksRepeatedResponse(assistantText, recentResponses)) {
+    assistantText = appendGamblingDisclaimer(
+      cleanHermyResponse(await postOllamaHermy(
+        hermyCfg,
+        buildOllamaHermyVoicePrompt(hermyCfg, sharedMemory, transcript, buildAntiRepeatInstruction(recentResponses)),
+      )),
+      transcript,
+    );
+  }
+
+  if (assistantText) {
+    const reactionFile = cfg.output?.reactionFile;
+    try {
+      const writtenPath = await writeTextFile(reactionFile, assistantText, cfg.output?.clearAfterMs);
+      if (writtenPath) {
+        console.log(`[spotify-ptt] mirrored Ollama Hermy-TV reply to ${writtenPath}`);
+      }
+    } catch (error) {
+      console.error('[spotify-ptt] reaction mirror failed:', error.message);
+    }
+    if (!isBanterOverrideText(transcript) && !isBanterOverrideText(assistantText)) {
+      await appendSharedMemory(hermyCfg.memory, STREAM_HERMY_ROOT, {
+        source: 'ctrl-f3-ptt',
+        user: transcript,
+        assistant: assistantText,
+      });
+    }
+    await appendRecentResponse(hermyCfg.memory, STREAM_HERMY_ROOT, assistantText);
+  }
+
+  const localSpeech = assistantText ? await trySpeakTextLocally(assistantText) : null;
+  return { assistantText, localSpeech, model: hermyCfg.ollama.model, profile: options.profile || 'hermy-tv' };
 }
 
 function resolveOpenClawProfile(cfg, profile) {

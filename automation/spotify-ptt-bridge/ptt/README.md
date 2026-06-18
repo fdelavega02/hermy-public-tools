@@ -40,7 +40,7 @@ Hermy-TV replies from `Ctrl+F3` also mirror into the OBS reaction text file conf
 
 ## Privacy note
 
-The bridge records to a temporary audio file only while PTT is active. The shared server transcribes it, sends the transcript to OpenClaw when configured, then deletes the temp audio file.
+The bridge records to a temporary audio file only while PTT is active, transcribes it, and then deletes the temp audio file. The normal voice lane can send transcripts to OpenClaw. The `Ctrl+F3` Hermy-TV lane sends transcripts to local Ollama Hermy-TV for reply text, then ElevenLabs reads that text locally.
 
 ## Shared state
 

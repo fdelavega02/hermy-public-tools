@@ -58,6 +58,8 @@ It is enabled to start on login.
 
 ## OBS reaction text
 
+`Ctrl+F3` uses the local Ollama Hermy-TV route for reply text. The bridge sends the voice transcript through the same Hermy-TV lore, memory, anti-repeat cache, and banter overrides used by the stream bridge, then ElevenLabs reads that Ollama-generated text locally.
+
 If `output.reactionFile` is set in `config.json`, Hermy-TV replies from the `Ctrl+F3` voice lane are also written to that file so OBS can show the same text that gets spoken locally.
 
 ## Quick commands
