@@ -5,6 +5,7 @@ No root required. Grabs only:
 - Ctrl+F2        => spotify profile
 - Ctrl+F1        => voice profile
 - Ctrl+F3        => hermy-tv profile
+- Ctrl+F4        => hermy-tv-ollama profile
 
 Uses XGrabKey directly instead of KDE global shortcuts so KeyPress/KeyRelease are
 handled by this process.
@@ -42,6 +43,7 @@ False_ = 0
 XK_F1 = 0xFFBE
 XK_F2 = 0xFFBF
 XK_F3 = 0xFFC0
+XK_F4 = 0xFFC1
 
 running = True
 active_profile: str | None = None
@@ -160,15 +162,18 @@ def main() -> int:
     f1_keycode = int(x11.XKeysymToKeycode(display, XK_F1))
     f2_keycode = int(x11.XKeysymToKeycode(display, XK_F2))
     f3_keycode = int(x11.XKeysymToKeycode(display, XK_F3))
+    f4_keycode = int(x11.XKeysymToKeycode(display, XK_F4))
     keycodes = {
         f2_keycode: "spotify",
         f1_keycode: "voice",
         f3_keycode: "hermy-tv",
+        f4_keycode: "hermy-tv-ollama",
     }
     profile_mods = {
         "spotify": ControlMask,
         "voice": ControlMask,
         "hermy-tv": ControlMask,
+        "hermy-tv-ollama": ControlMask,
     }
     lock_variants = [0, LockMask, Mod2Mask, LockMask | Mod2Mask]
 
@@ -215,6 +220,7 @@ def main() -> int:
                     "voice": "ctrl+f1",
                     "spotify": "ctrl+f2",
                     "hermy-tv": "ctrl+f3",
+                    "hermy-tv-ollama": "ctrl+f4",
                 }.get(profile, profile)
                 log("ptt-start", profile=profile, keycode=keycode, state=int(event.xkey.state), chord=chord)
                 if not args.dry_run:

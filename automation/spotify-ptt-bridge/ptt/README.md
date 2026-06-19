@@ -16,7 +16,8 @@ Current listener behavior:
 - X11 listener (`x11-ptt-listener.py`):
   - `Ctrl+F2` holds the Spotify voice-command profile.
   - `Ctrl+F1` holds the general voice relay profile.
-  - `Ctrl+F3` holds the Hermy-TV voice relay profile.
+  - `Ctrl+F3` holds the OpenClaw Hermy-TV voice relay profile.
+  - `Ctrl+F4` holds the local Ollama Hermy-TV voice relay profile.
 
 The retired raw input listener attempted to use:
 
@@ -27,7 +28,7 @@ That approach failed on this PC because reading `/dev/input/...` requires elevat
 
 The active X11 listener calls `/api/ptt/start` on press and `/api/ptt/stop` on release.
 
-Hermy-TV replies from `Ctrl+F3` also mirror into the OBS reaction text file configured in `config.json` so the on-screen reaction matches the spoken reply.
+Hermy-TV replies from `Ctrl+F3` and `Ctrl+F4` also mirror into the OBS reaction text file configured in `config.json` so the on-screen reaction matches the spoken reply.
 
 ## Clip replay
 
@@ -40,7 +41,7 @@ Hermy-TV replies from `Ctrl+F3` also mirror into the OBS reaction text file conf
 
 ## Privacy note
 
-The bridge records to a temporary audio file only while PTT is active, transcribes it, and then deletes the temp audio file. The normal voice lane can send transcripts to OpenClaw. The `Ctrl+F3` Hermy-TV lane sends transcripts to local Ollama Hermy-TV for reply text, then ElevenLabs reads that text locally.
+The bridge records to a temporary audio file only while PTT is active, transcribes it, and then deletes the temp audio file. The normal voice lane can send transcripts to OpenClaw. The `Ctrl+F3` Hermy-TV lane sends transcripts to the OpenClaw `twitch` agent. The `Ctrl+F4` Hermy-TV lane sends transcripts to local Ollama Hermy-TV for reply text, then ElevenLabs reads that text locally.
 
 ## Shared state
 

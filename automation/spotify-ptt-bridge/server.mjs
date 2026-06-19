@@ -616,7 +616,7 @@ async function handleTranscript(cfg, transcript, options = {}) {
     await logVoiceCommand({ transcript, profile, type: 'spotify', action: command.action, assistantText: command.assistantText, error: command.error || null, reason: options.reason || null });
     return { command };
   }
-  if (profile === 'hermy-tv') {
+  if (profile === 'hermy-tv-ollama') {
     const sent = await sendTranscriptToOllamaHermy(cfg, transcript, { profile });
     await logVoiceCommand({ transcript, profile, type: 'ollama-hermy-tv', assistantText: sent?.assistantText || null, error: sent?.localSpeech?.error || null, reason: options.reason || null, model: sent?.model || null });
     return { sent };
@@ -712,7 +712,7 @@ function buildOllamaHermyVoicePrompt(hermyCfg, sharedMemory, transcript, extraIn
     hermyCfg.ollama.lore ? `\nHermy-TV lore:\n${hermyCfg.ollama.lore}` : '',
     memoryBlock(sharedMemory),
     '',
-    'This message came from Francisco through Ctrl+F3 push-to-talk voice input.',
+    `This message came from Francisco through ${hermyCfg.hotkeyLabel || 'Ctrl+F4'} push-to-talk voice input.`,
     'Reply as Hermy-TV in normal text only. Keep it concise because ElevenLabs will read it aloud.',
     extraInstruction,
     '',
@@ -752,6 +752,7 @@ async function postOllamaHermy(hermyCfg, prompt) {
 
 async function sendTranscriptToOllamaHermy(cfg, transcript, options = {}) {
   const hermyCfg = await loadOllamaHermyConfig();
+  hermyCfg.hotkeyLabel = options.profile === 'hermy-tv-ollama' ? 'Ctrl+F4' : 'Hermy-TV push-to-talk';
   const override = banterOverrideForText(transcript);
   const sharedMemory = override ? '' : await readSharedMemory(hermyCfg.memory, STREAM_HERMY_ROOT);
   const recentResponses = await readRecentResponses(hermyCfg.memory, STREAM_HERMY_ROOT);
@@ -781,7 +782,7 @@ async function sendTranscriptToOllamaHermy(cfg, transcript, options = {}) {
     }
     if (!isBanterOverrideText(transcript) && !isBanterOverrideText(assistantText)) {
       await appendSharedMemory(hermyCfg.memory, STREAM_HERMY_ROOT, {
-        source: 'ctrl-f3-ptt',
+        source: options.profile === 'hermy-tv-ollama' ? 'ctrl-f4-ptt' : 'hermy-tv-ptt',
         user: transcript,
         assistant: assistantText,
       });
