@@ -12,6 +12,7 @@ This is a lightweight human changelog, not a formal release history.
 
 - Expanded the fake daily dashboard example with runtime/error-hygiene checks.
 - Clarified recovered-tool-failure guidance for recurring jobs that should call maintained scripts instead of fragile ad hoc command fragments.
+- Hardened the public auto-commit lane with owner coordination for public pushes and README freshness checks for major public repo changes.
 - Cleaned untracked Python cache folders from the working tree.
 
 ## 2026-06-05
