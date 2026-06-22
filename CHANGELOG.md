@@ -2,6 +2,12 @@
 
 This is a lightweight human changelog, not a formal release history.
 
+## 2026-06-18
+
+- Added the local Ollama Hermy-TV voice relay lane, including OBS reaction text mirroring for the Hermy-TV PTT profiles.
+- Updated the X11 PTT docs for the active `Ctrl+F1` through `Ctrl+F4` hold-to-talk shortcuts.
+- Kept the public Spotify/PTT export focused on reusable local automation while leaving private config, runtime state, and generated audio out of Git.
+
 ## 2026-06-12
 
 - Expanded the fake daily dashboard example with runtime/error-hygiene checks.
