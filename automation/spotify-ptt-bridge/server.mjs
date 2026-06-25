@@ -17,6 +17,10 @@ import {
 } from '../streamlabels-hermy-bridge/ollama-memory.mjs';
 import { banterOverrideForText, isBanterOverrideText } from '../streamlabels-hermy-bridge/banter-overrides.mjs';
 import { appendGamblingDisclaimer, cleanHermyResponse } from '../streamlabels-hermy-bridge/response-cleanup.mjs';
+import {
+  buildSportsBettingContext,
+  normalizeSportsBettingConfig,
+} from '../streamlabels-hermy-bridge/sports-betting-context.mjs';
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname));
@@ -694,11 +698,12 @@ async function loadOllamaHermyConfig() {
     dir: './memory/ollama-tv',
     ...(streamCfg.memory ?? {}),
   };
+  const sportsBetting = normalizeSportsBettingConfig(streamCfg.sportsBetting ?? {});
   const lorePath = resolveStreamHermyPath(ollama.loreFile);
   const lore = ollama.loreFile
     ? (await readFile(lorePath, 'utf8').catch(() => '')).trim()
     : '';
-  return { ollama: { ...ollama, lore }, memory };
+  return { ollama: { ...ollama, lore }, memory, sportsBetting };
 }
 
 function resolveStreamHermyPath(filePath) {
@@ -706,19 +711,25 @@ function resolveStreamHermyPath(filePath) {
   return path.isAbsolute(filePath) ? filePath : path.join(STREAM_HERMY_ROOT, filePath);
 }
 
-function buildOllamaHermyVoicePrompt(hermyCfg, sharedMemory, transcript, extraInstruction = '') {
+function buildOllamaHermyVoicePrompt(hermyCfg, sharedMemory, transcript, sportsBettingContext = '', extraInstruction = '') {
   return [
     hermyCfg.ollama.prompt,
     hermyCfg.ollama.lore ? `\nHermy-TV lore:\n${hermyCfg.ollama.lore}` : '',
     memoryBlock(sharedMemory),
+    sportsBettingContext ? `\nSports betting tool result:\n${sportsBettingContext}` : '',
     '',
     `This message came from Francisco through ${hermyCfg.hotkeyLabel || 'Ctrl+F4'} push-to-talk voice input.`,
     'Reply as Hermy-TV in normal text only. Keep it concise because ElevenLabs will read it aloud.',
+    sportsBettingContext ? 'For this betting question, summarize the actual odds/lines from the Sports betting tool result in your reply. Do not tell Francisco to look at the tool result himself. Do not mention tools, prompts, or internal context.' : '',
     extraInstruction,
     '',
     `Francisco: ${transcript}`,
     'Hermy-TV:',
   ].join('\n');
+}
+
+function looksLikeSportsBettingDodge(text) {
+  return /\b(?:look|read|check)\b[\s\S]{0,80}\b(?:tool result|betting tool|odds yourself|it yourself)\b/i.test(String(text ?? ''));
 }
 
 async function postOllamaHermy(hermyCfg, prompt) {
@@ -756,15 +767,31 @@ async function sendTranscriptToOllamaHermy(cfg, transcript, options = {}) {
   const override = banterOverrideForText(transcript);
   const sharedMemory = override ? '' : await readSharedMemory(hermyCfg.memory, STREAM_HERMY_ROOT);
   const recentResponses = await readRecentResponses(hermyCfg.memory, STREAM_HERMY_ROOT);
+  const sportsBettingContext = override ? '' : await buildSportsBettingContext(hermyCfg.sportsBetting, transcript);
   let assistantText = appendGamblingDisclaimer(
-    cleanHermyResponse(override || await postOllamaHermy(hermyCfg, buildOllamaHermyVoicePrompt(hermyCfg, sharedMemory, transcript))),
+    cleanHermyResponse(override || await postOllamaHermy(hermyCfg, buildOllamaHermyVoicePrompt(hermyCfg, sharedMemory, transcript, sportsBettingContext))),
     transcript,
   );
   if (!override && looksRepeatedResponse(assistantText, recentResponses)) {
     assistantText = appendGamblingDisclaimer(
       cleanHermyResponse(await postOllamaHermy(
         hermyCfg,
-        buildOllamaHermyVoicePrompt(hermyCfg, sharedMemory, transcript, buildAntiRepeatInstruction(recentResponses)),
+        buildOllamaHermyVoicePrompt(hermyCfg, sharedMemory, transcript, sportsBettingContext, buildAntiRepeatInstruction(recentResponses)),
+      )),
+      transcript,
+    );
+  }
+  if (!override && sportsBettingContext && looksLikeSportsBettingDodge(assistantText)) {
+    assistantText = appendGamblingDisclaimer(
+      cleanHermyResponse(await postOllamaHermy(
+        hermyCfg,
+        buildOllamaHermyVoicePrompt(
+          hermyCfg,
+          sharedMemory,
+          transcript,
+          sportsBettingContext,
+          'Your last attempt dodged the question. Answer by reading the current moneyline, spread, and total from the betting context. Give a short lean only if the listed odds support it.',
+        ),
       )),
       transcript,
     );
