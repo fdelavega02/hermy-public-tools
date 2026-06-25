@@ -60,7 +60,7 @@ It is enabled to start on login.
 
 `Ctrl+F3` uses the OpenClaw Hermy-TV route for reply text, through the `twitch` agent. `Ctrl+F4` uses the local Ollama Hermy-TV route. The local route sends the voice transcript through the same Hermy-TV lore, memory, anti-repeat cache, sports betting odds lookup, and banter overrides used by the stream bridge, then ElevenLabs reads that Ollama-generated text locally.
 
-The `Ctrl+F4` odds lookup reads `sportsBetting` from `../streamlabels-hermy-bridge/config.json` and uses the same `THE_ODDS_API_KEY` environment variable as the stream receiver.
+The `Ctrl+F4` odds lookup reads `sportsBetting` from `../streamlabels-hermy-bridge/config.json` and uses the same `THE_ODDS_API_KEY` environment variable as the stream receiver. If odds are available, the local voice reply should summarize the actual moneyline, spread, and total instead of telling Francisco to check a tool result.
 
 If `output.reactionFile` is set in `config.json`, Hermy-TV replies from the `Ctrl+F3` and `Ctrl+F4` voice lanes are also written to that file so OBS can show the same text that gets spoken locally.
 

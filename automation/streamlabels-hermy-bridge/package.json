@@ -1,0 +1,10 @@
+{
+  "name": "streamlabels-hermy-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Public-safe stream-side Hermy helper modules and config examples.",
+  "scripts": {
+    "check": "node --check sports-betting-context.mjs && node --check response-cleanup.mjs && node --check ollama-memory.mjs && node --check banter-overrides.mjs"
+  }
+}

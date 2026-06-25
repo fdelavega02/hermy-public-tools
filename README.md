@@ -27,6 +27,9 @@ A local LinkedIn posting helper for approved drafts. It uses a local browser wor
 ### `automation/spotify-ptt-bridge/`
 A local Spotify and push-to-talk bridge. It handles Spotify playback controls, voice transcription, local speech playback, hotkey listeners, and GPU Screen Recorder replay helpers with public-safe defaults.
 
+### `automation/streamlabels-hermy-bridge/`
+Public-safe stream-side Hermy-TV helper modules and config examples. The current export includes optional The Odds API lookup logic, Streamlabels/Streamlabs/Ollama prompt wiring notes, and shared config used by the Ctrl+F4 local Ollama voice lane without exposing private keys, live config, logs, IDs, or prompt internals.
+
 ### `docs/`
 Notes about how I approach local-first automation, cron migration checks, recovered tool failures, plus a small graveyard for failed experiments that are still worth learning from.
 

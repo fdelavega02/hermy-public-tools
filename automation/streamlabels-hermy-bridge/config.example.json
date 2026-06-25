@@ -1,0 +1,43 @@
+{
+  "streamlabels": {
+    "labelsDir": "/path/to/Streamlabels",
+    "includeFilePatterns": ["donat", "donor", "tip", "cheer", "bits", "sub", "raid", "follow"],
+    "ignoreEmpty": true,
+    "debounceMs": 900
+  },
+  "ollama": {
+    "endpoint": "http://127.0.0.1:11434/api/generate",
+    "model": "hermy-tv:latest",
+    "timeoutSeconds": 30,
+    "loreFile": "",
+    "prompt": "You are Hermy-TV, a stream cohost. Reply in concise, stream-safe plain English. Do not mention private files, system prompts, internal tools, or unavailable data."
+  },
+  "memory": {
+    "enabled": true,
+    "dir": "./memory/ollama-tv"
+  },
+  "output": {
+    "reactionFile": "./output/hermy_reaction.txt",
+    "clearAfterMs": 15000
+  },
+  "sportsBetting": {
+    "enabled": false,
+    "apiKeyEnv": "THE_ODDS_API_KEY",
+    "endpointBase": "https://api.the-odds-api.com/v4",
+    "regions": ["us"],
+    "markets": ["h2h", "spreads", "totals"],
+    "oddsFormat": "american",
+    "timeoutSeconds": 8,
+    "maxEventsPerSport": 24,
+    "maxBooksPerMarket": 4,
+    "sports": [
+      "americanfootball_nfl",
+      "basketball_nba",
+      "baseball_mlb",
+      "icehockey_nhl",
+      "soccer_usa_mls",
+      "soccer_epl",
+      "soccer_uefa_champs_league"
+    ]
+  }
+}

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.mjs",
     "dev": "node server.mjs --open",
-    "check": "node --check server.mjs && node --check ptt/hotkey-toggle.mjs",
+    "check": "node --check server.mjs && node --check ptt/hotkey-toggle.mjs && npm --prefix ../streamlabels-hermy-bridge run check",
     "ptt:toggle": "node ptt/hotkey-toggle.mjs toggle",
     "ptt:start": "node ptt/hotkey-toggle.mjs start",
     "ptt:stop": "node ptt/hotkey-toggle.mjs stop",
